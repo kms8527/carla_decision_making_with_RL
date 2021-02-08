@@ -49,7 +49,7 @@ class ReplayBuffer:
 
 class decision_driving_Agent:
 
-    def __init__(self,inputs_shape,num_actions,is_training):
+    def __init__(self,inputs_shape,num_actions,is_training,ROI_length):
 
         self.inputs_shape = inputs_shape
         self.num_actions = num_actions
@@ -65,6 +65,19 @@ class decision_driving_Agent:
         self.learning_rate =0.01
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
         self.loss = 9999999999
+        self.ROI_length = ROI_length #(meters)
+
+    def search_extra_in_ROI(self,extra_lists,player,extra_dl_list):
+        new_extra_lists = []
+        new_extra_dl_lists = []
+        ROI_distance = 1000
+        for n,extra in enumerate(extra_lists):
+            distance_between_vehicles = ((extra.get_location().x-player.get_location().x)**2+(extra.get_location().y-player.get_location().y)**2+(extra.get_location().z-player.get_location().z)**2)**0.5
+            if distance_between_vehicles < ROI_distance:
+                new_extra_lists.append(extra)
+                new_extra_dl_lists.append(extra_dl_list[n])
+        out = [new_extra_lists, new_extra_dl_lists]
+        return out
 
     def act(self,state):
 
@@ -135,22 +148,54 @@ class decision_driving_Agent:
         self.model.cuda()
         # self.target_model.cuda()
 
-
+# class phi_network(nn.Module):
+#     def __init__(self,input_size, hidden_size,feature_size):
+#         super(phi_network,self).__init__()
+#         self.input_size = input_size
+#         self.l1 = nn.Linear(input_size,hidden_size)
+#         self.l2 = nn.Linear(hidden_size,hidden_size)
+#         self.l3 = nn.Linear(hidden_size,feature_size)
+#         self.relue = nn.ReLU()
+#     def forward(self,x):
+#         x.view(-1)
 class DQN(nn.Module):
-    def __init__(self,input_size, hidden_size, output_size):
+    def __init__(self,input_size,feature_size, hidden_size, output_size):
         super(DQN,self).__init__()
-        self.input_size = input_size
-        self.l1 = nn.Linear(input_size,hidden_size)
-        self.relu = nn.ReLU()
+        self.input_size = input_size()
+        self.feature_size = feature_size
+
+        self.phi_network = nn.Sequential(
+            nn.Linear(input_size,hidden_size),
+            nn.ReLU(),
+            nn.Linear(hidden_size,hidden_size),
+            nn.ReLU(),
+            nn.Linear(hidden_size,feature_size)
+        )
+        self.rho_network = nn.Sequential(
+            nn.Linear(feature_size,hidden_size),
+            nn.ReLU(),
+            nn.Linear(hidden_size,hidden_size),
+            nn.ReLU(),
+            nn.Linear(hidden_size,feature_size)
+        )
+        self.l1 = nn.Linear(feature_size,hidden_size)
         self.l2 = nn.Linear(hidden_size,hidden_size)
         self.l3 = nn.Linear(hidden_size,output_size)
+        self.relu = nn.ReLU()
         # self.softmax = nn.Softmax(dim = 1)
 
-    def forward(self,x):
+    def forward(self,x,x_static):
         # print(x.size(0))
+        x=x.view(-1, self.input_size)
+        feature_points=torch.zeros(x.shape)
+        for index in x:
+            feature_points+=self.phi_network(index)
 
-        x.view(-1, self.input_size)
-        out = self.l1(x)
+        out = self.rho_network(feature_points)
+        print("after concat :", out.shape)
+        out = torch.cat((out,))
+        print("before concat :", out.shape)
+        out = self.l1(out)
         out = self.relu(out)
         out = self.l2(out)
         out = self.relu(out)

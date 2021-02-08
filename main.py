@@ -3,22 +3,26 @@ import glob
 import os
 import sys
 
-tmp = ['/home/zz/carmaker_ros/ros/ros1_ws/devel/lib/python2.7/dist-packages',
-       '/opt/ros/ros1/lib/python2.7/dist-packages', '/opt/ros/kinetic/lib/python2.7/dist-packages',
-       '/home/zz/Downloads/CARLA_0.9.6/PythonAPI/carla-0.9.6-py3.5-linux-x86_64.egg',
-       '/home/zz/Downloads/CARLA_0.9.6/PythonAPI/carla/dist/carla-0.9.6-py3.5-linux-x86_64.egg_FILES']
+tmp = ['/usr/lib/python38.zip', '/usr/lib/python3.8', '/usr/lib/python3.8/lib-dynload',
+       '/home/a/.local/lib/python3.8/site-packages','/usr/local/lib/python3.8/dist-packages', '/usr/lib/python3/dist-packages',
+       '/home/a/Downloads/pycharm-2020.3.3/plugins/python/helpers/pycharm_display','/home/a/anaconda3/envs/RL_decision/lib/python37.zip',
+       '/home/a/Downloads/pycharm-2020.3.3/plugins/python/helpers/pycharm_matplotlib_backend']
 for index in range(0, len(tmp)):
     if tmp[index] in sys.path:
         sys.path.remove(tmp[index])
 
-if not ('/home/zz/Downloads/CARLA_0.9.6/PythonAPI/carla/dist/carla-0.9.6-py3.5-linux-x86_64.egg_FILES' in sys.path):
-    sys.path.append('/home/zz/Downloads/CARLA_0.9.6/PythonAPI/carla/dist/carla-0.9.6-py3.5-linux-x86_64.egg_FILES')
+carla_library_path = 'home/a/Downloads/CARLA_0.9.10/PythonAPI/carla/dist/carla-0.9.10-py3.7-linux-x86_64'
+if not (carla_library_path in sys.path):
+    sys.path.append(carla_library_path)
 
-if not ('/home/zz/Downloads/CARLA_0.9.6/HDMaps' in sys.path):
-    sys.path.append('/home/zz/Downloads/CARLA_0.9.6/HDMaps')
-if not ('/home/zz/Downloads/CARLA_0.9.6/PythonAPI/carla' in sys.path):
-    sys.path.append('/home/zz/Downloads/CARLA_0.9.6/PythonAPI/carla')
+map_path = 'home/a/Downloads/CARLA_0.9.10/HDMaps'
+if not (map_path in sys.path):
+    sys.path.append(map_path)
 
+print(sys.path)
+print(sys.version)
+
+sys.path.append('home/a/Downloads/CARLA_0.9.10/PythonAPI/carla/dist/carla-0.9.10-py3.7-linux-x86_64/carla')
 
 try:
     sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
@@ -108,7 +112,7 @@ class CarlaEnv():
         #     world.debug.draw_string(x.location, 'o', draw_shadow=True,
         #                             color=carla.Color(r=0, g=255, b=255), life_time=30)
 
-        self.load_traj()
+        # self.load_traj()
 
         self.waypoint = self.map.get_waypoint(start_pose.location,lane_type=carla.LaneType.Driving)
         # print(self.waypoint.transform)
@@ -259,7 +263,6 @@ class CarlaEnv():
     def main(self):
 
         clock = pygame.time.Clock()
-
         display = pygame.display.set_mode(
             (self.width, self.height),
             pygame.HWSURFACE | pygame.DOUBLEBUF)
@@ -313,7 +316,7 @@ class CarlaEnv():
                     # curent_location=self.map.get_waypoint(self.player.get_transform().location,project_to_road=True)
                     # world.debug.draw_string(curent_location.transform.location, 'o', draw_shadow=True,
                     #                         color=carla.Color(r=0, g=255, b=255), life_time=100)
-                    ##이동궤적저장
+                    ##이동 궤적 저장
                     # self.save_traj(curent_location)
 
                     # self.world.debug.draw_point(ww.transform.location,size=0.1,color=carla.Color(r=255, g=255, b=255),life_time=1)
@@ -356,7 +359,7 @@ if __name__ == '__main__':
         client.set_timeout(4.0)
 
         weather = carla.WeatherParameters(
-            cloudyness=0.0,
+            cloudiness=0.0,
             precipitation=30.0,
             sun_altitude_angle=90.0)
 
