@@ -79,7 +79,7 @@ class Pure_puresuit_controller:
         self.ld = 0
         self.heading = None
         self.extra_actors = extra_actors
-        self.safe_distance = 999
+        self.safe_distance = 30
         self.leading_vehicle = None
         self.search_radius = None
         self.integral = 0
@@ -106,7 +106,8 @@ class Pure_puresuit_controller:
             self.leading_vehicle = None
             # self.player.set_autopilot(False)
             try:
-                self.waypoint = self.waypoint.next(25)[0]
+                # self.waypoint = self.waypoint.next(25)[0]
+                self.waypoint = self.waypoint.next(int(self.velocity / 3.6 + 3))[0]
                 self.waypoint = self.waypoint.get_right_lane()
             except:
                 print("오른쪽 판단, waypoint 존재 x")
@@ -116,7 +117,8 @@ class Pure_puresuit_controller:
             self.leading_vehicle = None
             # self.player.set_autopilot(False)
             try:
-                self.waypoint = random.choice(self.waypoint.next(25))
+                # self.waypoint = random.choice(self.waypoint.next(25))
+                self.waypoint = self.waypoint.next(int(self.velocity / 3.6 + 3))[0]
                 self.waypoint = self.waypoint.get_left_lane()
             except:
                 print("왼쪽 판단, waypoint 존재 x")

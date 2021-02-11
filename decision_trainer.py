@@ -58,7 +58,7 @@ class decision_driving_Agent:
         self.selection_method = None
         self.gamma = 0.9
         self.buffer = ReplayBuffer()
-        self.model  = DQN(self.inputs_shape,100,self.num_actions).cuda()
+        self.model  = DQN(self.inputs_shape,20,3,80,self.num_actions).cuda()
         self.epsilon = 1
         self.epsilon_min = 0.01
         self.decaying = 0.999
@@ -86,10 +86,15 @@ class decision_driving_Agent:
         else:
             self.epsilon = self.epsilon_min
 
+        x_static = state[-1]
+        state = state[:-1]
+
         if random.random() > self.epsilon or not self.is_training:
             self.selection_method = 'max'
+
             state = torch.tensor(state, dtype = torch.float).cuda() #uint8 ->float
-            self.q_value = self.model(state)
+            x_static = torch.tensor(x_static, dtype = torch.float).cuda()
+            self.q_value = self.model(state,x_static)
             # print(self.q_value)
             action =  int(self.q_value.max().item())-1 #이게 argmax Q가 맞다고?
             # print(action)
@@ -103,6 +108,10 @@ class decision_driving_Agent:
     def learning(self): # sample에서 뽑고 backpropagation 하는 과정
         s0, a, r, s1, done = self.buffer.sample(self.batch_size)
         # print(s0)
+        x_static_0 = s0[-1]
+        x_static_1 = s1[-1]
+        s0 = s0[:-1]
+        s1 = s1[:-1]
         s0 = torch.tensor(s0, dtype=torch.float)
         s1 = torch.tensor(s1, dtype=torch.float)
         a = torch.tensor(a, dtype=torch.long)
@@ -117,8 +126,8 @@ class decision_driving_Agent:
 
         ##  forward  ##
 
-        q_values = self.model(s0).cuda()
-        next_q_values = self.model(s1).cuda()
+        q_values = self.model(s0,x_static_0).cuda()
+        next_q_values = self.model(s1,x_static_1).cuda()
 
         q_value = q_values.gather(1, a.unsqueeze(1)+1).squeeze(1)
         next_q_value = next_q_values.gather(1, next_q_values.max(1)[1].unsqueeze(1)).squeeze(1)
@@ -159,10 +168,11 @@ class decision_driving_Agent:
 #     def forward(self,x):
 #         x.view(-1)
 class DQN(nn.Module):
-    def __init__(self,input_size,feature_size, hidden_size, output_size):
+    def __init__(self,input_size,feature_size,x_static_size, hidden_size, output_size):
         super(DQN,self).__init__()
-        self.input_size = input_size()
-        self.feature_size = feature_size
+        self.input_size = input_size
+        self.static_size = x_static_size
+        self.feature_size = feature_size+x_static_size
 
         self.phi_network = nn.Sequential(
             nn.Linear(input_size,hidden_size),
@@ -178,7 +188,7 @@ class DQN(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_size,feature_size)
         )
-        self.l1 = nn.Linear(feature_size,hidden_size)
+        self.l1 = nn.Linear(self.feature_size,hidden_size)
         self.l2 = nn.Linear(hidden_size,hidden_size)
         self.l3 = nn.Linear(hidden_size,output_size)
         self.relu = nn.ReLU()
@@ -186,15 +196,16 @@ class DQN(nn.Module):
 
     def forward(self,x,x_static):
         # print(x.size(0))
+
         x=x.view(-1, self.input_size)
-        feature_points=torch.zeros(x.shape)
+        feature_points=torch.zeros(self.feature_size-self.static_size).cuda()
         for index in x:
             feature_points+=self.phi_network(index)
 
         out = self.rho_network(feature_points)
-        print("after concat :", out.shape)
-        out = torch.cat((out,))
         print("before concat :", out.shape)
+        out = torch.cat((out,x_static),0)
+        print("after concat :", out.shape)
         out = self.l1(out)
         out = self.relu(out)
         out = self.l2(out)
