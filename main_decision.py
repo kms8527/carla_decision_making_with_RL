@@ -1,7 +1,7 @@
-import time
-import glob
-import os.path
-import sys
+# import time
+# import glob
+# import os.path
+# import sys
 
 # tmp = ['/home/zz/carmaker_ros/ros/ros1_ws/devel/lib/python2.7/dist-packages',
 #        '/opt/ros/ros1/lib/python2.7/dist-packages', '/opt/ros/kinetic/lib/python2.7/dist-packages',
@@ -11,14 +11,14 @@ import sys
 #     if tmp[index] in sys.path:
 #         sys.path.remove(tmp[index])
 
-if not ('/home/zz/Downloads/CARLA_0.9.6/PythonAPI/carla/dist/carla-0.9.6-py3.5-linux-x86_64.egg_FILES' in sys.path):
-    sys.path.append('/home/zz/Downloads/CARLA_0.9.6/PythonAPI/carla/dist/carla-0.9.6-py3.5-linux-x86_64.egg_FILES')
-
-if not ('/home/zz/Downloads/CARLA_0.9.6/HDMaps' in sys.path):
-    sys.path.append('/home/zz/Downloads/CARLA_0.9.6/HDMaps')
-if not ('/home/zz/Downloads/CARLA_0.9.6/PythonAPI/carla' in sys.path):
-    sys.path.append('/home/zz/Downloads/CARLA_0.9.6/PythonAPI/carla')
-
+# if not ('/home/zz/Downloads/CARLA_0.9.6/PythonAPI/carla/dist/carla-0.9.6-py3.5-linux-x86_64.egg_FILES' in sys.path):
+#     sys.path.append('/home/zz/Downloads/CARLA_0.9.6/PythonAPI/carla/dist/carla-0.9.6-py3.5-linux-x86_64.egg_FILES')
+#
+# if not ('/home/zz/Downloads/CARLA_0.9.6/HDMaps' in sys.path):
+#     sys.path.append('/home/zz/Downloads/CARLA_0.9.6/HDMaps')
+# if not ('/home/zz/Downloads/CARLA_0.9.6/PythonAPI/carla' in sys.path):
+#     sys.path.append('/home/zz/Downloads/CARLA_0.9.6/PythonAPI/carla')
+#
 
 # try:
 #     sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
@@ -74,10 +74,10 @@ class CarlaEnv():
         #센서 종류
         self.actor_list = []
         self.extra_list = []
-        self.ROI_extra_list = []
+        self.extra_list = []
         self.extra_controller_list = []
         self.extra_dl_list = []
-        self.ROI_extra_dl_list = []
+        self.extra_dl_list = []
         self.player = None
         self.camera_rgb = None
         self.camera_semseg = None
@@ -110,10 +110,11 @@ class CarlaEnv():
         #                             color=carla.Color(r=255, g=255, b=255), life_time=999)
 
         settings = self.world.get_settings()
+        # settings.no_rendering_mode = True
         # settings.synchronous_mode = True
         settings.fixed_delta_seconds = 0.02
         self.world.apply_settings(settings)
-        self.extra_num = 0
+        self.extra_num = 30
         self.section = 0
         self.lane_distance_between_start =None
         self.lane_distance_between_end = None
@@ -123,8 +124,7 @@ class CarlaEnv():
         self.pre_max_Lane_num = self.max_Lane_num
 
         self.restart()
-
-        self.main_test()
+        self.main()
 
     def restart(self):
         self.decision = None
@@ -138,16 +138,44 @@ class CarlaEnv():
         self.episode_start = time.time()
         self.pre_max_Lane_num = self.max_Lane_num
         self.index = 0
-        print('destroying actors.')
+        print('start destroying actors.')
 
-        if len(self.actor_list) !=0:
+        if len(self.actor_list) != 0:
+            # print('destroying actors.')
+            # print("actor 제거 :", self.actor_list)
+
             for actor in self.actor_list:
-                # print("현재 actor 개수",len(self.actor_list))
-                actor.destroy()
-        if len(self.extra_list)!=0:
-            for extra in self.extra_list:
-                # print("현재 extra 개수",len(self.extra_list))
-                extra.destroy()
+                # print("finally 에서 actor 제거 :", self.actor_list)
+                if actor.is_alive:
+                    actor.destroy()
+            print("finshed actor destroy")
+            # for x in self.actor_list:
+            #     try:
+            #         client.apply_batch([carla.command.DestroyActors(x.id)])
+            #     except:
+            #         continue
+        if len(self.extra_list) != 0:
+            # client.apply_batch([carla.command.DestoryActors(x.id) for x in self.extra_list])
+            # print("extra 제거 :", self.extra_list)
+            for x in self.extra_list:
+                try:
+                    client.apply_batch([carla.command.DestroyActor(x.id)])
+                except:
+                    continue
+            # for extra in self.extra_list:
+            #     # print("finally 에서 actor 제거 :", self.extra_list)
+            #     print(extra.is_alive)
+            #     if extra.is_alive:
+            #         extra.destroy()
+            print("finshed extra destroy")
+
+            # for x in self.extra_list:
+            #     try:
+            #         client.apply_batch([carla.command.DestroyActor(x.id)])
+            #     except:
+            #         continue
+        print('finished destroying actors.')
+
         self.actor_list = []
         self.extra_list = []
         self.ROI_extra_list = []
@@ -247,12 +275,12 @@ class CarlaEnv():
                             carla.Rotation(pitch=-90)))
 
 
-
         ROI=1000
         # extra_target_velocity = 10
         port = 8000
         traffic_manager = client.get_trafficmanager(port)
         traffic_manager.set_global_distance_to_leading_vehicle(100.0)
+        # traffic_manager.set_synchronous_mode(True) # for std::out_of_range eeror
         tm_port = traffic_manager.get_port()
         for extra in self.extra_list:
             extra.set_autopilot(True,tm_port)
@@ -262,9 +290,7 @@ class CarlaEnv():
             traffic_manager.auto_lane_change(extra,False)
         # self.player.set_autopilot(True,tm_port)
         # traffic_manager.auto_lane_change(self.player, False)
-
-        self.controller = Pure_puresuit_controller(self.player, self.waypoint, self.extra_list, 30)  # km/h
-
+        self.controller = Pure_puresuit_controller(self.player, self.waypoint, self.extra_list, 70)  # km/h
 
         # target_velocity = 60 / 3.6
         # forward_vec = self.player.get_transform().get_forward_vector()
@@ -326,12 +352,12 @@ class CarlaEnv():
         #         logging.error(response.error)
         #     else:
         #         self.extra_list.append(response.actor_id)
+        print(5)
 
-
-    def step(self, action):
+    def step(self, decision):
         SECONDS_PER_EPISODE = 1000
-        plc = 0
-        decision = None
+        plc = 10
+        # decision = None
         '''
         # Simple Action (action number: 3)
         action_test = action -1
@@ -339,14 +365,14 @@ class CarlaEnv():
         '''
 
         # Complex Action
-        if action == 0:  # LK
-            decision = 0
-        elif action == -1:  # left
-            plc += 10
-            decision = -1
-        elif action == 1:  # right
-            plc += 10
-            decision = 1
+        if decision == 0:  # LK
+            plc = 0
+        # elif action == -1:  # left
+        #     plc += 10
+        #     decision = -1
+        # elif action == 1:  # right
+        #     plc += 10
+        #     decision = 1
 
         '''
         if len(self.collision_hist) != 0:
@@ -365,9 +391,12 @@ class CarlaEnv():
         elif end_length < 15:
             done = True
             reward = 1
+        elif self.max_Lane_num < self.ego_Lane:
+            done = True
+            reward = -100
         else:
             reward = 1 - (self.controller.desired_vel-self.controller.velocity)/self.controller.desired_vel-plc
-
+        # print(reward)
         self.accumulated_reward += reward
 
         if time.time() > self.episode_start + SECONDS_PER_EPISODE:
@@ -375,56 +404,55 @@ class CarlaEnv():
 
         #state length = 4 * num of extra vehicles + 1
 
-        state = self.get_next_state(decision) #get now state
+        state, x_static = self.get_next_state(decision) #get now state
 
         # if len(state) == 29:
         #     print(" ")
-        return state, decision ,reward, None , done
+        return state, x_static, decision ,reward, None, None , done
                                         # Next State 표현 필요
     def get_next_state(self,decision=None):
         """
         dl : relative lane num after ching the lane
         dr, dv, da : now state
         """
-
-
         state = []
-        for x, extra in enumerate(self.ROI_extra_list):
-            extra_pos = extra.get_transform().location
-            extra_vel = extra.get_velocity()
-            extra_acel = extra.get_acceleration()
-            dr = ((extra_pos.x - self.player.get_transform().location.x) ** 2 + (
-                        extra_pos.y - self.player.get_transform().location.y) ** 2 + (
-                              (extra_pos.z - self.player.get_transform().location.z) ** 2) - (self.waypoint.lane_width*(self.ROI_extra_dl_list[x]))**2)**0.5
-            dv =(self.player.get_velocity().x** 2 + self.player.get_velocity().y** 2 + self.player.get_velocity().z** 2) ** 0.5- (extra_vel.x ** 2 + extra_vel.y ** 2 + extra_vel.z ** 2) ** 0.5
-
-            length =2*extra.bounding_box.extent.x/10 # length of extra vehicle
-
-            # da = ((extra_acel.x - self.player.get_acceleration().x) ** 2 + (
-            #         extra_acel.y - self.player.get_acceleration().y) ** 2 +
-            #       (extra_acel.z - self.player.get_acceleration().z) ** 2) ** 0.5
-
+        for x, extra in enumerate(self.extra_list):
 
             if decision == 1:
                 self.extra_dl_list[x] =self.extra_dl_list[x]+1
-                self.ROI_extra_dl_list[x] =self.ROI_extra_dl_list[x]+1
+                # self.ROI_extra_dl_list[x] =self.ROI_extra_dl_list[x]+1
 
             elif decision == -1:
                 self.extra_dl_list[x] = self.extra_dl_list[x]-1
-                self.ROI_extra_dl_list[x] = self.ROI_extra_dl_list[x]-1
+                # self.ROI_extra_dl_list[x] = self.ROI_extra_dl_list[x]-1
 
             else:
                 pass
 
 
-            state_dyn = [dr, dv, length, self.ROI_extra_dl_list[x]]
+            extra_pos = extra.get_transform().location
+            extra_vel = extra.get_velocity()
+            extra_acel = extra.get_acceleration()
+            dr = ((extra_pos.x - self.player.get_transform().location.x) ** 2 + (
+                        extra_pos.y - self.player.get_transform().location.y) ** 2 + (
+                              (extra_pos.z - self.player.get_transform().location.z) ** 2))**0.5 - abs(self.waypoint.lane_width*(self.extra_dl_list[x]))
+            if isinstance(dr,complex):
+                print("complex")
+            dv =(self.player.get_velocity().x** 2 + self.player.get_velocity().y** 2 + self.player.get_velocity().z** 2) ** 0.5- (extra_vel.x ** 2 + extra_vel.y ** 2 + extra_vel.z ** 2) ** 0.5
+
+            length = 2 * extra.bounding_box.extent.x/10 # length of extra vehicle
+
+            # da = ((extra_acel.x - self.player.get_acceleration().x) ** 2 + (
+            #         extra_acel.y - self.player.get_acceleration().y) ** 2 +
+            #       (extra_acel.z - self.player.get_acceleration().z) ** 2) ** 0.5
+
+            state_dyn = [dr, dv, length, self.extra_dl_list[x]]
             state.append(state_dyn)
             # state.append(dr)
 
             # state.append(dv)
             # state.append(da)
-            # state.append(self.ROI_extra_dl_list[x])
-
+            # state.append(self.extra_dl_list[x])
 
         if decision == 1:
             self.ego_Lane +=1
@@ -432,14 +460,15 @@ class CarlaEnv():
             self.ego_Lane +=-1
         else:
             pass
+        x_static= []
+        x_static.append([self.ego_Lane, self.controller.velocity, self.search_distance_valid()/self.ROI_length])
 
-        x_static=[self.ego_Lane, self.controller.velocity, self.search_distance_valid()/self.ROI_length]
 
-
-        state.append(x_static)
+        # state.append(x_static)
 
         # state.append(self.ego_Lane)
-        return state
+        out = [state, x_static]
+        return out
 
     def search_distance_valid(self):
             # index= 4-self.ego_Lane
@@ -451,7 +480,7 @@ class CarlaEnv():
             i=0.01
             self.world.debug.draw_string(self.controller.waypoint.transform.location,
                                          'o', draw_shadow=True,
-                                         color=carla.Color(r=0, g=0, b=255), life_time=9999)
+                                         color=carla.Color(r=0, g=0, b=255), life_time=1)
             try:
                 while last_lane_waypoint.lane_id > -4:  # get waypoint of forth's lane
                     last_lane_waypoint = last_lane_waypoint.get_right_lane()
@@ -459,9 +488,9 @@ class CarlaEnv():
             except:
                 print("4-th lane not found")
 
-            self.world.debug.draw_string(last_lane_waypoint.transform.location,
-                                             '4', draw_shadow=True,
-                                             color=carla.Color(r=0, g=255, b=255), life_time=9999)
+            # self.world.debug.draw_string(last_lane_waypoint.transform.location,
+            #                                  '4', draw_shadow=True,
+            #                                  color=carla.Color(r=0, g=255, b=255), life_time=9999)
 
             # print(self.ego_Lane)
             # if self.max_Lane_num ==3:
@@ -526,7 +555,12 @@ class CarlaEnv():
             #         else:
             #             return max(-(distance + i), -self.ROI_length)
 
-    def safety_check(self,decision, safe_lane_change_again_time=4):
+    def safety_check(self,decision, safe_lane_change_again_time=5):
+        # print("method : ", self.agent.selection_method)
+        # if decision==-1 and self.ego_Lane ==1:
+        #     print("here")
+        # elif decision ==1 and self.ego_Lane ==self.max_Lane_num:
+        #     print("here")
         if decision !=0 and decision !=None:
             if (time.time()-self.lane_change_time) <= safe_lane_change_again_time:
                 return 0 #즉 직진
@@ -537,9 +571,9 @@ class CarlaEnv():
                 action = random.randrange(0, 2)
                 return action
             elif self.ego_Lane ==self.max_Lane_num and decision ==1:
-                return int(self.agent.q_value[0:1].max().item())-1
+                return int(self.agent.q_value[0][0:2].argmax().item())-1
             elif self.ego_Lane ==1 and decision ==-1:
-                return int(self.agent.q_value[1:2].max().item())-1
+                return int(self.agent.q_value[0][1:3].argmax().item()) #not max exception
             elif decision ==1 and self.ego_Lane != self.max_Lane_num:
                 self.lane_change_time = time.time()
                 return decision
@@ -554,15 +588,16 @@ class CarlaEnv():
                     action = random.randrange(0, 2)
                     return action
                 elif self.ego_Lane == self.max_Lane_num and decision == 1:
-                    return int(self.agent.q_value[0:1].max().item()) - 1
+                    return int(self.agent.q_value[0][0:2].argmax().item()) - 1
                 elif self.ego_Lane == 1 and decision == -1:
-                    return int(self.agent.q_value[1:2].max().item()) - 1
+                    return int(self.agent.q_value[0][1:3].argmax().item())
         else:
             return decision
     # def safety_check_between_vehicles(self):
     #     if extra_lists
 
     def main_test(self):
+        restart_time = time.time()
         PATH = "/home/a/RL_decision/trained_info.tar"
         print(torch.cuda.get_device_name())
         clock = pygame.time.Clock()
@@ -606,6 +641,9 @@ class CarlaEnv():
 
         pre_decision = None
         while True:
+            # if time.time()-restart_time > 10:
+            #     print("restart")
+            #     self.restart()
             if Keyboardcontrol.parse_events(client, self, clock):
                 return
             self.spectator.set_transform(
@@ -643,7 +681,7 @@ class CarlaEnv():
             ## finished get max lane ##
             # print("finished get lane")
 
-            print(self.search_distance_valid())
+            self.search_distance_valid()
             # print("distance :" ,,"max_lane_num : ", self.max_Lane_num)
 
             if self.max_Lane_num==3:
@@ -685,13 +723,14 @@ class CarlaEnv():
         display = pygame.display.set_mode(
             (self.width, self.height),
             pygame.HWSURFACE | pygame.DOUBLEBUF)
-        self.agent = decision_driving_Agent(self.input_size,self.output_size,True,1000)
+        self.agent = decision_driving_Agent(self.input_size,self.output_size,True,1000,self.extra_num)
         self.lane_start_point = [carla.Location(x=14.905815, y=-135.747452, z=0.000000),
                             carla.Location(x=172.745468, y=-364.531799, z=0.000000),
                             carla.Location(x=382.441040, y=-212.488907, z=0.000000)]
         self.lane_finished_point = [carla.Location(x=14.631096, y=-205.746918, z=0.000000),
                                carla.Location(x=232.962860, y=-364.149139, z=0.000000),
                                carla.Location(x=376.542816, y=-10.352980, z=0.000000)]
+        self.lane_change_point = [carla.Location(x=14.905815, y=-135.747452, z=0.000000),carla.Location(x=14.631096, y=-205.746918, z=0.000000),carla.Location(x=172.745468, y=-364.531799, z=0.000000) ,carla.Location(x=232.962860, y=-364.149139, z=0.000000), carla.Location(x=382.441040, y=-212.488907, z=0.000000),carla.Location(x=376.542816, y=-10.352980, z=0.000000)]
 
         self.world.debug.draw_string(carla.Location(x=14.905815, y=-135.747452, z=0.000000),
                                      'o', draw_shadow=True,
@@ -720,16 +759,19 @@ class CarlaEnv():
                     self.lane_start_point[i].y - self.lane_finished_point[i].y) ** 2 + (
                                                         self.lane_start_point[i].z - self.lane_finished_point[i].z) ** 2)
 
-
+        epoch_init = 0
         # if(os.path.exists(PATH)):
         #     print("저장된 가중치 불러옴")
-        #     torch.load(PATH)
-        #     self.agent.model.load_state_dict(self.save_dir['model'])
+        #     checkpoint = torch.load(PATH)
+        #
+        #     self.agent.model.load_state_dict(checkpoint['model_state_dict'])
         #     device = torch.device('cuda')
         #     self.agent.model.to(device)
-        #     self.agent.optimizer.load_state_dict(self.save_dir['optimizer'])
-            # self.agent.buffer.
-            # 'memorybuffer': self.agent.buffer
+        #     self.agent.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        #     self.agent.buffer = checkpoint['memorybuffer']
+        #     epoch_init = checkpoint['epoch']
+
+            # self.agent.buffer.load_state_dict(self.save_dir['memorybuffer'])
 
             # self.is_first_time = False
         # controller = VehicleControl(self, True)
@@ -739,14 +781,14 @@ class CarlaEnv():
         # for i in vehicles:
         #     print(i.id)
         try:
-            n_iters = 10000
+            n_iters = 150
             is_error = 0
 
-            for epoch in range(n_iters):
+            for epoch in range(epoch_init,n_iters):
                 # cnt = 0
                 first_time_print = True
 
-                state = self.get_next_state() #초기 상태 s0 초기화
+                [state, x_static] = self.get_next_state() #초기 상태 s0 초기화
                 while(True):
                     if Keyboardcontrol.parse_events(client, self, clock):
                         return
@@ -789,7 +831,7 @@ class CarlaEnv():
                         self.world.debug.draw_string(self.waypoint.transform.location,
                                                      'o', draw_shadow=True,
                                                      color=carla.Color(r=255, g=255, b=255), life_time=9999)
-                    [self.ROI_extra_list, self.ROI_extra_dl_list] = self.agent.search_extra_in_ROI(self.extra_list,self.player,self.extra_dl_list)
+                    # [self.extra_list, self.extra_dl_list] = self.agent.search_extra_in_ROI(self.extra_list,self.player,self.extra_dl_list)
 
                     ## finished to visualize ##
 
@@ -810,53 +852,59 @@ class CarlaEnv():
                                 'model_state_dict': self.agent.model.state_dict(),
                                 'optimizer_state_dict': self.agent.optimizer.state_dict(),
                                 'memorybuffer': self.agent.buffer}, PATH)
-
-
+                        # print(clock.get_fps())
+                        # if  time.time() - self.simul_time >10 and clock.get_fps()  < 15:
+                        #     self.restart()
+                        #     time.sleep(3)
+                        #     continue
                         if self.decision is not None:
-                            next_state = self.get_next_state(self.decision)
-
-
-                            sample = [state, self.decision, reward, next_state, done]
+                            [next_state, next_x_static] = self.get_next_state()
+                            sample = [state, x_static, self.decision, reward, next_state, next_x_static, done]
                             self.agent.buffer.append(sample)
 
-
-                        self.decision = self.agent.act(state)
+                        # print("befor act")
+                        self.decision = self.agent.act(state,x_static)
+                        # print("after act")
 
 
                         # print(decision)
                         # if self.decision ==1 and self.max_Lane_num==self.ego_Lane:
                         #     print( " ")
-                        self.decision = self.safety_check(self.decision)
-                        print("판단 :", self.decision, "최대 차선 :", self.max_Lane_num)
+                        # print("befroe safte check/ 판단 :", self.decision, "최대 차선 :", self.max_Lane_num, "ego lane :",self.ego_Lane)
 
+                        self.decision = self.safety_check(self.decision)
+                        # print("판단 :", self.decision, "최대 차선 :", self.max_Lane_num, "ego lane :",self.ego_Lane)
+
+                        # print("before")
                         is_error = self.controller.apply_control(self.decision)
+                        # print("after")
 
                         # print("extra_controller 개수 :", len(self.extra_controller_list))
                         # for i in range(len(self.extra_controller_list)):
                         #     self.extra_controller_list[i].apply_control()
 
 
-
-                        [state, decision, reward, _, done] =  self.step(self.decision)
+                        # print("before step")
+                        [state, x_static, decision, reward, __, _, done] =  self.step(self.decision)
+                        # print("after step")
 
                         if done:
                             print("epsilon :",self.agent.epsilon)
-                            print("epoch : ", epoch , "누적 보상 : ",self.accumulated_reward)
-                            writer.add_scalar('누적 보상 ',self.accumulated_reward,epoch)
-
-                            if len(self.agent.buffer.size())>self.agent.batch_size:
-
+                            print("epoch : ", epoch , "누적 보상 : ", self.accumulated_reward)
+                            writer.add_scalar('누적 보상 ',self.accumulated_reward, epoch)
+                            if len(self.agent.buffer.size()) > self.agent.batch_size:
+                                # print("start learning")
                                 for i in range(300):
                                     self.agent.learning()
-
+                            # print("finished learning")
                             client.set_timeout(10)
                             self.restart()
                             break
 
                     else:
-                        self.agent.act(state)
+                        self.agent.act(state,x_static)
 
-                    clock.tick(30)
+                    clock.tick(40)
                     self.hud.tick(self, clock)
 
 
@@ -865,12 +913,16 @@ class CarlaEnv():
             # client.apply_batch([carla.command.DestroyActor(x) for x in self.extra_list])
 
             print('destroying actors.')
+            # client.apply_batch([carla.command.DestroyActors(x.id) for x in self.actor_list])
+            # client.apply_batch([carla.command.DestroyActors(x.id) for x in self.extra_list])
             for actor in self.actor_list:
                 # print("finally 에서 actor 제거 :", self.actor_list)
-                actor.destroy()
+                if actor.is_alive:
+                    actor.destroy()
             for extra in self.extra_list:
                 # print("finally 에서 actor 제거 :", self.extra_list)
-                extra.destroy()
+                if extra.is_alive:
+                    extra.destroy()
 
             # pygame.quit()
             print('done.')

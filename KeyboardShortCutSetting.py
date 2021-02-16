@@ -36,7 +36,6 @@ except ImportError:
 
 class KeyboardControl(object):
     def __init__(self, env, start_in_autopilot):
-        self.d
         pass
     def parse_events(self,client,env,clock):
         for event in pygame.event.get():
@@ -49,12 +48,10 @@ class KeyboardControl(object):
                     env.camera_rgb.toggle_camera()
                     # env.camera_semseg.toggle_camera()
                 elif event.key == K_SPACE:
-                    if env.agent.decaying != 0:
-                        print("decaying(",env.agent.decaying,") to 0")
-                        env.agent.decaying = 0
+                    if self.agent.is_training is True:
+                        self.agent.is_training = False
                     else:
-                        print("decaying(", env.agent.decaying, ") to 0.5")
-                        env.agent.decaying = 0.5
+                        self.agent.is_training = True
 
     @staticmethod
     def _is_quit_shortcut(key): #ctrl + q 또는 Escape 누를 시 종료

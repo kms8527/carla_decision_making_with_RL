@@ -42,10 +42,12 @@ class Pure_puresuit_controller:
 
     def __init__(self,player,waypoint=None,extra_actors=None,desired_vel=40):
         self.player = player
-
         self.player_length = math.hypot(self.player.get_physics_control().wheels[0].position.x-self.player.get_physics_control().wheels[2].position.x,
                                         self.player.get_physics_control().wheels[0].position.y-self.player.get_physics_control().wheels[2].position.y)/100.0 #unit : meters
-
+        # self.player_length = ((self.player.get_physics_control().wheels[0].position.x - self.player.get_physics_control().wheels[
+        #         2].position.x)**2+(self.player.get_physics_control().wheels[0].position.y - self.player.get_physics_control().wheels[
+        #         2].position.y)**2)**0.5 / 100.0  # unit : meters
+        # self.player_length = 2.9348175211493803
         self.world = self.player.get_world()
         if waypoint ==None:
             self.waypoint = self.map.get_waypoint(self.player.get_location(),lane_type=carla.LaneType.Driving)
@@ -68,26 +70,25 @@ class Pure_puresuit_controller:
         # self.error = 0
         # self.error_dot = 0
         # self.error_int = 0
-
         self.k_v = [0.5, -0.004, 0.003] #60km/h : [0.03, 0.004, 0.003] #kp, kd, ki
-        self.k_acc = [0.2, -0.001, 0.001]
+        # self.k_acc = [0.2, -0.001, 0.001]
         self.cnt = 0
         self.t = time.time()
-        self.acc_start_time = 0
+        # self.acc_start_time = 0
         self.pos_pre = self.player.get_location()
         self.pos = (self.player.get_physics_control().wheels[2].position+self.player.get_physics_control().wheels[3].position)/200.0
+        # self.pos = carla.Vector3D(x=8.186243, y=-64.277382, z=0.359655)
         self.ld = 0
         self.heading = None
         self.extra_actors = extra_actors
         self.safe_distance = 30
         self.leading_vehicle = None
         self.search_radius = None
-        self.integral = 0
+        # self.integral = 0
         self.a = 0
         self.y_ini = 0
         self.steer = 0
         self.h_constant = 1.8
-
     def apply_control(self,decision=None):
         dt = time.time() - self.t
         # print(1/dt)
@@ -102,7 +103,7 @@ class Pure_puresuit_controller:
             self.world.debug.draw_string(self.waypoint.transform.location, 'o', draw_shadow=True,
                                      color=carla.Color(r=255, g=255, b=255), life_time=1)
         if decision == 1:
-            print("차오른쪽 차선 변경 수행")
+            print("right 차선 변경 수행")
             self.leading_vehicle = None
             # self.player.set_autopilot(False)
             try:
@@ -113,13 +114,17 @@ class Pure_puresuit_controller:
                 print("오른쪽 판단, waypoint 존재 x")
                 return -1
         elif decision == -1:
-            print("왼쪽 차선 변경 수행")
+            print("left 차선 변경 수행")
             self.leading_vehicle = None
             # self.player.set_autopilot(False)
             try:
                 # self.waypoint = random.choice(self.waypoint.next(25))
+                tmp = self.waypoint
                 self.waypoint = self.waypoint.next(int(self.velocity / 3.6 + 3))[0]
                 self.waypoint = self.waypoint.get_left_lane()
+                if self.waypoint is None:
+                    self.waypoint = tmp.next(int(self.velocity / 3.6 + 3))[0]
+                    print("waypoint is None")
             except:
                 print("왼쪽 판단, waypoint 존재 x")
                 return -1
@@ -152,7 +157,7 @@ class Pure_puresuit_controller:
                                          color=carla.Color(r=255, g=255, b=255), life_time=1)
         loop_break = False
         if self.leading_vehicle == None   : #전방 차량이 없거나 없어졌을 때 다시 전방 차량을 찾아줌. 없으면 None값으로 초기화
-            self.integral = 0
+            # self.integral = 0
             if self.extra_actors is not None: #ego vehicle 만 수행
                 for actor in self.extra_actors:
                     extra_pos = actor.get_transform().location
@@ -167,7 +172,7 @@ class Pure_puresuit_controller:
                                 print("추종 시작")
                                 self.leading_vehicle = actor
                                 self.y_ini = self.a
-                                self.acc_start_time = time.time()
+                                # self.acc_start_time = time.time()
                                 loop_break= True
                                 break
                         if loop_break == True:
