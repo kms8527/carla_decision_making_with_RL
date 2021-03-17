@@ -26,6 +26,7 @@ class HUD(object):
         self._show_info = True
         self._info_text = []
         self._server_clock = pygame.time.Clock()
+        self.vehicles = None
 
     def on_world_tick(self, timestamp):
         self._server_clock.tick()
@@ -91,8 +92,8 @@ class HUD(object):
 
             def distance(l): return math.sqrt(
                 (l.x - t.location.x) ** 2 + (l.y - t.location.y) ** 2 + (l.z - t.location.z) ** 2)
-            vehicles = [(distance(x.get_location()), x) for x in vehicles if x.id != env.player.id]
-            for d, vehicle in sorted(vehicles):
+            self.vehicles = [(distance(x.get_location()), x) for x in vehicles if x.id != env.player.id]
+            for d, vehicle in sorted(self.vehicles):
                 if d > 200.0:
                     break
                 vehicle_type = get_actor_display_name(vehicle, truncate=22)

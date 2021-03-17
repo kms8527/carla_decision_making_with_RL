@@ -61,10 +61,10 @@ class Pure_puresuit_controller:
         self.error_v_dot = 0
         self.error_v_int = 0
 
-        self.error_acc_pre = 0
-        self.error_acc = 0
-        self.error_acc_dot = 0
-        self.error_acc_int = 0
+        self.leading_distance_pre = 0
+        self.leading_distance = 0
+        self.leading_distance_dot = 0
+        self.leading_distance_int = 0
 
         # self.error_pre = 0
         # self.error = 0
@@ -81,16 +81,20 @@ class Pure_puresuit_controller:
         self.ld = 0
         self.heading = None
         self.extra_actors = extra_actors
-        self.safe_distance = 30
+        self.safe_distance = 20
         self.leading_vehicle = None
         self.search_radius = None
+        self.left_search_radius = None
+        self.right_search_radius = None
         # self.integral = 0
         self.a = 0
         self.y_ini = 0
         self.steer = 0
         self.h_constant = 1.8
+
     def apply_control(self,decision=None):
         dt = time.time() - self.t
+        self.safe_distance = int(self.h_constant*self.velocity+10)
         # print(1/dt)
         ## waypoint update ##
         if self.ld < self.player_length+self.waypoint.lane_width:
@@ -108,7 +112,7 @@ class Pure_puresuit_controller:
             # self.player.set_autopilot(False)
             try:
                 # self.waypoint = self.waypoint.next(25)[0]
-                self.waypoint = self.waypoint.next(int(self.velocity / 3.6 + 3))[0]
+                self.waypoint = self.waypoint.next(int(self.velocity / 2.0 + 3))[0]
                 self.waypoint = self.waypoint.get_right_lane()
             except:
                 print("오른쪽 판단, waypoint 존재 x")
@@ -120,11 +124,12 @@ class Pure_puresuit_controller:
             try:
                 # self.waypoint = random.choice(self.waypoint.next(25))
                 tmp = self.waypoint
-                self.waypoint = self.waypoint.next(int(self.velocity / 3.6 + 3))[0]
+                self.waypoint = self.waypoint.next(int(self.velocity / 2.0 + 3))[0]
                 self.waypoint = self.waypoint.get_left_lane()
                 if self.waypoint is None:
-                    self.waypoint = tmp.next(int(self.velocity / 3.6 + 3))[0]
-                    print("waypoint is None")
+                    self.waypoint = tmp.next(int(self.velocity / 2.0 + 3))[0]
+                    print("waypoint is None, waypoint :", self.waypoint)
+
             except:
                 print("왼쪽 판단, waypoint 존재 x")
                 return -1
@@ -156,6 +161,9 @@ class Pure_puresuit_controller:
             self.world.debug.draw_string(self.leading_vehicle.get_transform().location, 'o', draw_shadow=True,
                                          color=carla.Color(r=255, g=255, b=255), life_time=1)
         loop_break = False
+
+
+
         if self.leading_vehicle == None   : #전방 차량이 없거나 없어졌을 때 다시 전방 차량을 찾아줌. 없으면 None값으로 초기화
             # self.integral = 0
             if self.extra_actors is not None: #ego vehicle 만 수행
@@ -165,12 +173,17 @@ class Pure_puresuit_controller:
                         for x in range(1, self.safe_distance+1-int(self.waypoint.lane_width), 1):
                             # self.world.debug.draw_string(self.waypoint.next(x)[0].transform.location, 'o', draw_shadow=True,
                             #                         color=carla.Color(r=255, g=255, b=255), life_time=1)
-                            self.search_radius = ((extra_pos.x - self.waypoint.next(x)[
-                                0].transform.location.x) ** 2 + (extra_pos.y - self.waypoint.next(x)[
-                                0].transform.location.y) ** 2) ** 0.5
+                            try:
+                                self.search_radius = ((extra_pos.x - self.waypoint.next(x)[
+                                    0].transform.location.x) ** 2 + (extra_pos.y - self.waypoint.next(x)[
+                                    0].transform.location.y) ** 2) ** 0.5
+                            except:
+                                return False
+
                             if self.search_radius <= self.waypoint.lane_width/2:
-                                print("추종 시작")
+                                # print("추종 시작")
                                 self.leading_vehicle = actor
+
                                 self.y_ini = self.a
                                 # self.acc_start_time = time.time()
                                 loop_break= True
@@ -182,12 +195,14 @@ class Pure_puresuit_controller:
                         print("IndexError 발생")
                         pass
         else:
-            self.error_acc = ((self.leading_vehicle.get_transform().location.x - self.player.get_transform().location.x) ** 2 + (
+
+            self.leading_distance = ((self.leading_vehicle.get_transform().location.x - self.player.get_transform().location.x) ** 2 + (
                                         self.leading_vehicle.get_transform().location.y - self.player.get_transform().location.y) ** 2 + (
-                                        self.leading_vehicle.get_transform().location.z - self.player.get_transform().location.z) ** 2) ** 0.5  \
-                                       - self.safe_distance
+                                        self.leading_vehicle.get_transform().location.z - self.player.get_transform().location.z) ** 2) ** 0.5\
+                                        -self.safe_distance
+            # print(self.leading_distance)
             # Finished when the leading vehicle is faster than desired_Vel or out of range
-            if self.error_acc > 0 or self.velocity > self.desired_vel:
+            if self.leading_distance > 0 or self.velocity > self.desired_vel:
                 self.leading_vehicle = None
             # pass
 
@@ -212,19 +227,19 @@ class Pure_puresuit_controller:
         #     # print("ACC")
         #     self.error_v_pre = self.error_v
         #
-        #     self.error_acc_pre = self.error_acc
-        #     self.error_acc = ((self.leading_vehicle.get_transform().location.x - self.player.get_transform().location.x) ** 2 + (
+        #     self.leading_distance_pre = self.leading_distance
+        #     self.leading_distance = ((self.leading_vehicle.get_transform().location.x - self.player.get_transform().location.x) ** 2 + (
         #             self.leading_vehicle.get_transform().location.y - self.player.get_transform().location.y) ** 2 + (
         #             self.leading_vehicle.get_transform().location.z - self.player.get_transform().location.z) ** 2) ** 0.5  \
         #                      - self.safe_distance
         #
-        #     self.error_acc_dot = (self.error_acc - self.error_acc_pre) / dt
-        #     self.error_acc_int += self.error_acc * dt
-        #     if self.error_acc < 0.5:
+        #     self.leading_distance_dot = (self.leading_distance - self.leading_distance_pre) / dt
+        #     self.leading_distance_int += self.leading_distance * dt
+        #     if self.leading_distance < 0.5:
         #         self.cnt = 2
         #     if self.cnt != 2:
         #         self.error_v_int += self.error_v * dt
-        #     self.error = [self.error_acc, self.error_acc_dot, self.error_acc_int ]
+        #     self.error = [self.leading_distance, self.leading_distance_dot, self.leading_distance_int ]
         #     print("ACC error : ", self.error[0])
         #     self.control_input(self.k_acc, self.error, steer)
         #
@@ -286,19 +301,40 @@ class Pure_puresuit_controller:
             self.player.apply_control(carla.VehicleControl(throttle=0, steer=self.steer, brake=b))
 
     def apply_ACC(self,dt):
+
+
         # self.h_constant = 1.8
         lamda = 0.4
         # tau = 0.5
-        leading_vehicle_length = self.leading_vehicle.bounding_box.extent.x
+        leading_vehicle_length = self.leading_vehicle.bounding_box.extent.x # /2 = leading vehicle length
         # L_des = leading_vehicle_length*2+h*self.velocity
         epsilon = -(((self.leading_vehicle.get_transform().location.x - self.player.get_transform().location.x) ** 2 + (
                             self.leading_vehicle.get_transform().location.y - self.player.get_transform().location.y) ** 2 + (
                             self.leading_vehicle.get_transform().location.z - self.player.get_transform().location.z) ** 2) ** 0.5 \
-                  -self.player_length-leading_vehicle_length)
+                  -self.player_length/2-leading_vehicle_length)
 
-        spacing_error = epsilon + self.h_constant*self.velocity
+        # print(epsilon)
+
+        spacing_error = epsilon + self.h_constant*self.velocity+10
+        # print(spacing_error)
         x_des_ddot = -1/self.h_constant * (epsilon + lamda * spacing_error)
+        # print(x_des_ddot)
+        accel_x = self.player.get_acceleration().x
+        accel_y = self.player.get_acceleration().y
+        accel_z = self.player.get_acceleration().z
+        Max = max(abs(accel_x),abs(accel_y))
+        sign = 0
+        if accel_x ==Max or accel_y ==Max:
+            sign = 1
+        else:
+            sign = -1
+
         self.a = x_des_ddot
+        current_accel =sign* (accel_x**2+accel_y**2+ accel_z**2)**0.5
+        error = x_des_ddot- current_accel
+
+        # print(error)
+
         # t= time.time()- self.acc_start_time
         # self.integral += math.exp(tau*t)*x_des_ddot*dt
         # print(self.integral)
