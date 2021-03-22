@@ -54,16 +54,17 @@ class decision_driving_Agent:
         self.inputs_shape = inputs_shape
         self.num_actions = num_actions
         self.is_training = is_training
-        self.batch_size = 1000
+        self.batch_size = 64
         self.selection_method = None
-        self.gamma = 0.999
+        self.gamma = 0.99
         self.buffer = ReplayBuffer()
         self.model  = DQN(self.inputs_shape,20,3,80,self.num_actions,self.batch_size,self.extra_num).cuda()
-        # self.model2 =
+        self.target_model = DQN(self.inputs_shape,20,3,80,self.num_actions,self.batch_size,self.extra_num).cuda()
         self.epsilon = 1
-        self.epsilon_min = 0.1
+
+        self.epsilon_min = 0.05
         self.decaying = 0.999
-        self.learning_rate =0.01
+        self.learning_rate =0.001
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
         self.loss = 9999999999
         self.ROI_length = ROI_length #(meters)
@@ -134,6 +135,8 @@ class decision_driving_Agent:
 
         ##  forward  ##
         # print("start forward")
+        self.model.eval()
+
         q_values = self.model(s0,x0_static).cuda()
         next_q_values = self.model(s1,x1_static).cuda()
 
@@ -143,26 +146,26 @@ class decision_driving_Agent:
         expected_q_values = r + self.gamma * next_q_value * (1 - done)
         # print("expected_q_values :" , expected_q_values[0], "q_value :", q_value[0])
         # print("finished forward")
-
+        self.model.train()
         # 0 : 좌회전 , 1 : 직진 : 2 : 우회전 시 Q value
-        self.loss = (q_value - expected_q_values.detach()).pow(2).mean()
-
+        # self.loss = (q_value - expected_q_values.detach()).pow(2).mean()
+        self.loss = F.smooth_l1_loss(q_value,expected_q_values)
         # print(" loss : ", self.loss, "q_value :", q_value.mean())
         # next_q_state_values = self.target_model(s1).cuda()
 
         #off-policy
 
-
+        # zero the gradients after updating
+        self.optimizer.zero_grad()
         ##  backward  ##
         self.loss.backward()
 
         ##  update weights  ##
         self.optimizer.step()
 
-        # zero the gradients after updating
-        self.optimizer.zero_grad()
 
-    def D3QN_learning(self):
+
+    def DDQN_learning(self):
         """
                 DQN learning
                 """
@@ -187,6 +190,9 @@ class decision_driving_Agent:
 
         ##  forward  ##
         # print("start forward")
+        self.model.eval()
+        self.target_model.eval()
+
         q_values = self.model(s0, x0_static).cuda()
         next_q_values = self.model(s1, x1_static).cuda()
 
@@ -196,6 +202,7 @@ class decision_driving_Agent:
         expected_q_values = r + self.gamma * next_q_value * (1 - done)
         # print("expected_q_values :" , expected_q_values[0], "q_value :", q_value[0])
         # print("finished forward")
+        self.model.train()
 
         # 0 : 좌회전 , 1 : 직진 : 2 : 우회전 시 Q value
         self.loss = (q_value - expected_q_values.detach()).pow(2).mean()

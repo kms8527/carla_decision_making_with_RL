@@ -323,8 +323,8 @@ class CarlaEnv():
                     spawn_point = self.waypoint.next(d)[0].transform
                 elif i==2:
                     spawn_point = self.waypoint.next(d)[0].get_right_lane().transform
-                elif i ==3:
-                    spawn_point = self.waypoint.next(200)[0].get_right_lane().get_right_lane().transform
+                elif i ==3: # 200 originally
+                    spawn_point = self.waypoint.next(1000)[0].get_right_lane().get_right_lane().transform
                 else:
                     print("Except ")
                 spawn_point = carla.Transform((spawn_point.location + carla.Location(z=1)), spawn_point.rotation)
@@ -503,7 +503,7 @@ class CarlaEnv():
 
     def step(self, decision):
         SECONDS_PER_EPISODE = 1000
-        plc = 1
+        plc = 0.1
         # decision = None
         '''
         # Simple Action (action number: 3)
@@ -540,9 +540,9 @@ class CarlaEnv():
             reward = 1
         elif self.max_Lane_num < self.ego_Lane:
             done = True
-            reward = -1
+            reward = 100
         else:
-            reward = - abs(self.controller.desired_vel-self.controller.velocity)/self.controller.desired_vel-plc
+            reward = 1- abs(self.controller.desired_vel-self.controller.velocity)/self.controller.desired_vel-plc
         # print(reward)
         self.accumulated_reward += reward
 
@@ -601,7 +601,6 @@ class CarlaEnv():
 
     def get_dr(self):
 
-        distance = 999
         dr= np.zeros(len(self.extra_list))
         ego_forth_lane = self.get_waypoint_of_forth_lane(self.player)
 
@@ -694,6 +693,8 @@ class CarlaEnv():
                 last_lane_waypoint = last_lane_waypoint.get_right_lane()
             # print("lane id : ", last_lane_waypoint.lane_id)
         except:
+            self.restart()
+            self.start_epoch = False
             self.world.debug.draw_string(last_lane_waypoint.transfrom.location, 'o', draw_shadow=True,
                                          color=carla.Color(r=255, g=255, b=255), life_time=1)
             print("4-th lane not found")
@@ -888,7 +889,7 @@ class CarlaEnv():
 
 
 
-    def safety_check(self,decision,state, safe_lane_change_again_time=3):
+    def safety_check(self,decision,state, safe_lane_change_again_time=1):
         remained_action_list = None
         action = decision
         if decision !=0 and decision !=None:
@@ -1205,36 +1206,32 @@ class CarlaEnv():
                             'epsilon': self.agent.epsilon}, PATH)
                     # print(clock.get_fps())
 
+                    if time.time() - self.simul_time > 7 and time.time() - self.simul_time < 8 and clock.get_fps() < 15:
+                        time.sleep(5)
+                        self.restart()
+                        self.start_epoch = False
+
                     if self.decision is not None:
                         [next_state, next_x_static] = self.get_next_state()
-                        if self.decision_changed == True:
-                            sample = [state, x_static, self.decision, reward-1, next_state, next_x_static, done]
-                        else:
-                            sample = [state, x_static, self.decision, reward, next_state, next_x_static, done]
+                        sample = [state, x_static, self.decision, reward, next_state, next_x_static, done]
+
+                        # if self.decision_changed == True:
+                        #     sample = [state, x_static, self.decision, reward-1, next_state, next_x_static, done]
+                        # else:
+                        #     sample = [state, x_static, self.decision, reward, next_state, next_x_static, done]
 
                         self.decision_changed = False
 
                         # print("sample, final action : ", self.decision)
-                        if time.time() - self.simul_time > 7 and time.time() - self.simul_time < 8 and clock.get_fps() < 15:
-                            time.sleep(5)
-                            self.restart()
-                            self.start_epoch = False
-                        self.agent.buffer.append(sample)
 
-                    # print("befor act")
+                        if self.controller.lane_change_finished == True:
+                            self.agent.buffer.append(sample)
+
+                        # if len(self.agent.buffer.size()) > self.agent.batch_size:
+                        #     self.agent.learning()
+
                     self.decision = self.agent.act(state, x_static)
-                    # print("after act")
-
-                    # print(decision)
-                    # if self.decision ==1 and self.max_Lane_num==self.ego_Lane:
-                    #     print( " ")
-                    # print("before safte check/ 판단 :", self.decision, "최대 차선 :", self.max_Lane_num, "ego lane :",self.ego_Lane)
-                    # tmp = self.decision
-                    # tmp2 = self.ego_Lane
                     self.decision = self.safety_check(self.decision, state)
-                    # print("after safety check 판단 :", self.decision)
-
-                    # print("before")
                     is_error = self.controller.apply_control(self.decision)
                     # print("extra_controller 개수 :", len(self.extra_controller_list))
                     # for i in range(len(self.extra_controller_list)):
@@ -1252,14 +1249,20 @@ class CarlaEnv():
                     # print("after step")
 
                     if done:
+                        n=100.0
+                        acummulated_loss = 0.0
                         print("epsilon :", self.agent.epsilon)
                         print("epoch : ", epoch, "누적 보상 : ", self.accumulated_reward)
-                        writer.add_scalar('누적 보상 ', self.accumulated_reward, epoch)
+
+                        #offline learning
                         if len(self.agent.buffer.size()) > self.agent.batch_size:
                             # print("start learning")
-                            for i in range(100):
-                                self.agent.learning()
-                        # print("finished learning")
+                            for i in range(int(n)):
+                                acummulated_loss += self.agent.loss
+
+                        writer.add_scalar('누적 보상 ', self.accumulated_reward, epoch)
+                        writer.add_scalar('Loss', acummulated_loss/n)
+                        print("finished learning")
                         client.set_timeout(10)
                         time.sleep(5)
                         self.restart()

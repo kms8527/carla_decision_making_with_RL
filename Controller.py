@@ -91,6 +91,7 @@ class Pure_puresuit_controller:
         self.y_ini = 0
         self.steer = 0
         self.h_constant = 1.8
+        self.lane_change_finished = True
 
     def apply_control(self,decision=None):
         dt = time.time() - self.t
@@ -100,6 +101,7 @@ class Pure_puresuit_controller:
         if self.ld < self.player_length+self.waypoint.lane_width:
             try:
                 self.waypoint =self.waypoint.next(int(self.velocity/3.6*0.3+3))[0]
+                self.lane_change_finished = True
 
             except:
                 print("직진 차선, waypoint 존재 x")
@@ -114,6 +116,7 @@ class Pure_puresuit_controller:
                 # self.waypoint = self.waypoint.next(25)[0]
                 self.waypoint = self.waypoint.next(int(self.velocity / 2.0 + 3))[0]
                 self.waypoint = self.waypoint.get_right_lane()
+                self.lane_change_finished = False
             except:
                 print("오른쪽 판단, waypoint 존재 x")
                 return -1
@@ -126,6 +129,7 @@ class Pure_puresuit_controller:
                 tmp = self.waypoint
                 self.waypoint = self.waypoint.next(int(self.velocity / 2.0 + 3))[0]
                 self.waypoint = self.waypoint.get_left_lane()
+                self.lane_change_finished = False
                 if self.waypoint is None:
                     self.waypoint = tmp.next(int(self.velocity / 2.0 + 3))[0]
                     print("waypoint is None, waypoint :", self.waypoint)

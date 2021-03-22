@@ -6,5 +6,6 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="examples" />
     <orderEntry type="module" module-name="agents" />
+    <orderEntry type="module" module-name="cartpole" />
   </component>
 </module>
