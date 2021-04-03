@@ -109,9 +109,9 @@ class CarlaEnv():
         settings = self.world.get_settings()
         # settings.no_rendering_mode = True
         # settings.synchronous_mode = True
-        settings.fixed_delta_seconds = 0.05
+        settings.fixed_delta_seconds = 0.03
         self.world.apply_settings(settings)
-        self.extra_num = 7
+        self.extra_num = 11
         self.scenario =  "random"#"random" #
         self.pilot_style = "manual" # "auto"
 
@@ -123,7 +123,7 @@ class CarlaEnv():
         self.index = 0
 
         self.pre_max_Lane_num = self.max_Lane_num
-
+        self.trash_extra = None
         self.restart()
         self.main()
 
@@ -145,6 +145,8 @@ class CarlaEnv():
         self.index = 0
         # print('start destroying actors.')
 
+        if self.trash_extra is not None and self.trash_extra.is_alive:
+            self.trash_extra.destroy()
         if len(self.actor_list) != 0:
             # print('destroying actors.')
             # print("actor 제거 :", self.actor_list)
@@ -262,7 +264,7 @@ class CarlaEnv():
         spawn_point = None
 
         if self.scenario == "random":
-            distance_step = 10
+            distance_step = 30
             end = distance_step * (self.extra_num) + 1
             for i in range(distance_step, end, distance_step):
                 dl=random.choice([-1,0,1])
@@ -294,7 +296,7 @@ class CarlaEnv():
             spawn_point = carla.Transform(carla.Location(x=14.797643, y=-163.310318, z=2.000000),
                                           carla.Rotation(pitch=0.000000, yaw=-450.224854, roll=0.000000))
             blueprint = random.choice(blueprints)
-            trash_extra = self.world.spawn_actor(blueprint, spawn_point)
+            self.trash_extra = self.world.spawn_actor(blueprint, spawn_point)
 
             for extra in self.extra_list:
                 if self.pilot_style == "auto":
@@ -302,14 +304,19 @@ class CarlaEnv():
                 elif self.pilot_style == "manual":
                     tm = client.get_trafficmanager(8000)
                     tm_port = tm.get_port()
-                    extra.set_autopilot(True,tm_port)
                     tm.auto_lane_change(extra, False)
                     # controller = Pure_puresuit_controller(extra, self.waypoint, None, 30)  # km/h
                     # self.extra_controller_list.append(controller)
                     target_velocity = 30  # random.randrange(10, 40) # km/h
-                    extra.enable_constant_velocity(extra.get_transform().get_right_vector() * target_velocity / 3.6)
-            trash_extra.enable_constant_velocity(extra.get_transform().get_right_vector() * 0.0 / 3.6)
-            trash_extra.destroy()
+                    extra.set_target_velocity(extra.get_transform().get_forward_vector() * target_velocity / 3.6)
+
+                    # extra.enable_constant_velocity(extra.get_transform().get_forward_vector() * target_velocity / 3.6)
+                    extra.set_autopilot(True,tm_port)
+
+                    self.world.constant_velocity_enabled = True
+
+            self.trash_extra.enable_constant_velocity(extra.get_transform().get_right_vector() * 0.0 / 3.6)
+
 
 
 
@@ -577,7 +584,7 @@ class CarlaEnv():
         if len(self.collision_sensor.history) != 0:
             done = True
             reward = -1
-        elif time.time()-self.simul_time > 10:
+        elif time.time()-self.simul_time > 20:
             print("done")
             done = True
             reward = 0
@@ -587,6 +594,8 @@ class CarlaEnv():
         else:
             reward = -abs(self.controller.desired_vel-self.controller.velocity)/(self.controller.desired_vel*10)-plc
         # print(reward)
+        # if self.decision_changed == True:
+        #     reward -= -1
         self.accumulated_reward += reward
 
         #state length = 4 * num of extra vehicles + 1
@@ -870,7 +879,7 @@ class CarlaEnv():
         return True
 
 
-    def safety_check(self,decision, safe_lane_change_again_time=2):
+    def safety_check(self,decision, safe_lane_change_again_time=3):
         remained_action_list = None
         action = decision
         # print("befor decision: ", self.decision,"before lane", self.ego_Lane)
@@ -969,7 +978,7 @@ class CarlaEnv():
                 return
 
             self.spectator.set_transform(
-                carla.Transform(self.player.get_transform().location + carla.Location(z=50),
+                carla.Transform(self.player.get_transform().location + carla.Location(z=100),
                                 carla.Rotation(pitch=-90)))
             self.camera_rgb.render(display)
             self.hud.render(display)
@@ -1051,7 +1060,7 @@ class CarlaEnv():
 
     def main(self):
 
-        PATH = "/home/a/RL_decision/"
+        PATH = "/home/a/RL_decision/per_weights/"
         print(torch.cuda.get_device_name())
         clock = pygame.time.Clock()
         Keyboardcontrol = KeyboardControl(self, False)
@@ -1078,7 +1087,7 @@ class CarlaEnv():
 
         epoch_init = 0
 
-        load_dir = PATH+'trained_info2650.pt'
+        load_dir = PATH+'trained_info.pt'
         if(os.path.exists(load_dir)):
             print("저장된 가중치 불러옴")
             checkpoint = torch.load(load_dir)
@@ -1207,6 +1216,7 @@ class CarlaEnv():
                     else:
                         self.decision = self.agent.act(state, x_static)
 
+                    # pre_decision = self.decision
                     self.decision = self.safety_check(self.decision)
                     # print("after decision: ", self.decision, "after lane", self.ego_Lane)
 
@@ -1279,6 +1289,8 @@ class CarlaEnv():
 
                     else:
                         sample = [state, x_static, self.decision, reward, next_state, next_x_static, done]
+                        # sample = [state, x_static, pre_decision, reward, next_state, next_x_static, done]
+
                         if self.controller.is_lane_changing == True and self.controller.is_start_to_lane_change == False or epoch ==epoch_init: #
                             pass
                         else:
@@ -1296,7 +1308,6 @@ class CarlaEnv():
 
                     self.decision = self.agent.act(state, x_static)
                     # print(self.decision)
-
                     self.decision = self.safety_check(self.decision)
 
                     is_error = self.controller.apply_control(self.decision)

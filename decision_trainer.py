@@ -124,35 +124,6 @@ class decision_driving_Agent:
         self.td_Error_epsilon = 0.0001
         self.controller = controller
 
-    # def get_prioritized_indexes(self):
-    #     '''TD 오차에 따른 확률로 인덱스를 추출'''
-    #
-    #     # TD 오차의 합을 계산
-    #     sum_absolute_td_error = np.sum(np.absolute(self.memory.memory))
-    #     sum_absolute_td_error += self.td_Error_epsilon * len(self.memory.memory)  # 충분히 작은 값을 더해줌
-    #
-    #     # batch_size 개만큼 난수를 생성하고 오름차순으로 정렬
-    #     rand_list = np.random.uniform(0, sum_absolute_td_error, self.batch_size)
-    #     rand_list = np.sort(rand_list)
-    #
-    #     # 위에서 만든 난수로 인덱스를 결정
-    #     indexes = []
-    #     idx = 0
-    #     tmp_sum_absolute_td_error = 0
-    #     for rand_num in rand_list:
-    #         while tmp_sum_absolute_td_error < rand_num:
-    #             tmp_sum_absolute_td_error += (
-    #                     abs(self.memory[idx]) + self.td_Error_epsilon)
-    #             idx += 1
-    #
-    #         # TD_ERROR_EPSILON을 더한 영향으로 인덱스가 실제 갯수를 초과했을 경우를 위한 보정
-    #         if idx >= len(self.memory):
-    #             idx = len(self.memory) - 1
-    #         indexes.append(idx)
-    #
-    #     return indexes
-
-
     def update_td_error_memory(self,alpha = 0.6):
         self.model.eval()
         self.target_model.eval()
