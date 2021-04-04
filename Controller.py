@@ -98,16 +98,15 @@ class Pure_puresuit_controller:
     def apply_control(self,decision=None):
         dt = time.time() - self.t
         self.safe_distance = int(self.h_constant*self.velocity+20)
-        self.is_lane_changing = False
 
         # print(1/dt)
         ## waypoint update ##
         if self.waypoint is None:
             return False
-        if self.ld < self.player_length+self.waypoint.lane_width:
+        if self.ld < self.player_length+self.waypoint.lane_width/3.0:
             try:
                 self.waypoint =self.waypoint.next(int(self.velocity/3.6*0.3+3))[0]
-                self.is_start_to_lane_change = False
+                self.is_lane_changing = False
             except:
                 print("직진 차선, waypoint 존재 x")
                 return -1
@@ -117,10 +116,12 @@ class Pure_puresuit_controller:
         if self.is_start_to_lane_change == True:
             self.is_lane_changing = True
 
+        self.is_start_to_lane_change = False
+
+
         if decision == 1 and self.is_lane_changing == False:
             # print("right 차선 변경 수행")
             self.leading_vehicle = None
-            self.is_lane_changing = True
             self.is_start_to_lane_change = True
             # self.player.set_autopilot(False)
             try:
@@ -141,7 +142,6 @@ class Pure_puresuit_controller:
                 # tmp = self.waypoint
                 self.waypoint = self.waypoint.next(int(self.velocity / 1.4 + 3))[0]
                 self.waypoint = self.waypoint.get_left_lane()
-                self.is_lane_changing = True
                 self.is_start_to_lane_change = True
                 # self.world.debug.draw_string(self.waypoint.transform.location, 'o', draw_shadow=True,
                 #                              color=carla.Color(r=0, g=255, b=0), life_time=1)
@@ -151,6 +151,12 @@ class Pure_puresuit_controller:
                 return -1
         if self.waypoint is None:
             return False
+
+        # if self.is_lane_changing == True and self.is_start_to_lane_change == False:
+        #     self.world.debug.draw_string(self.waypoint.transform.location, 'o', draw_shadow=True,
+        #                                  color=carla.Color(r=255, g=0, b=0), life_time=-1)
+
+
         if self.player.is_alive:
             self.pos =(self.player.get_physics_control().wheels[2].position+self.player.get_physics_control().wheels[3].position)/200.0#self.player.get_location()
             self.heading = self.player.get_transform().rotation.yaw #self.pos- self.pos_pre

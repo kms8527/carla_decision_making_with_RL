@@ -112,7 +112,7 @@ class CarlaEnv():
         settings.fixed_delta_seconds = 0.03
         self.world.apply_settings(settings)
         self.extra_num = 11
-        self.scenario =  "random"#"random" #
+        self.scenario =  "scenario3"#"random" #
         self.pilot_style = "manual" # "auto"
 
         self.section = 0
@@ -123,7 +123,6 @@ class CarlaEnv():
         self.index = 0
 
         self.pre_max_Lane_num = self.max_Lane_num
-        self.trash_extra = None
         self.restart()
         self.main()
 
@@ -145,8 +144,6 @@ class CarlaEnv():
         self.index = 0
         # print('start destroying actors.')
 
-        if self.trash_extra is not None and self.trash_extra.is_alive:
-            self.trash_extra.destroy()
         if len(self.actor_list) != 0:
             # print('destroying actors.')
             # print("actor 제거 :", self.actor_list)
@@ -264,7 +261,7 @@ class CarlaEnv():
         spawn_point = None
 
         if self.scenario == "random":
-            distance_step = 30
+            distance_step = 20
             end = distance_step * (self.extra_num) + 1
             for i in range(distance_step, end, distance_step):
                 dl=random.choice([-1,0,1])
@@ -296,7 +293,6 @@ class CarlaEnv():
             spawn_point = carla.Transform(carla.Location(x=14.797643, y=-163.310318, z=2.000000),
                                           carla.Rotation(pitch=0.000000, yaw=-450.224854, roll=0.000000))
             blueprint = random.choice(blueprints)
-            self.trash_extra = self.world.spawn_actor(blueprint, spawn_point)
 
             for extra in self.extra_list:
                 if self.pilot_style == "auto":
@@ -315,7 +311,6 @@ class CarlaEnv():
 
                     self.world.constant_velocity_enabled = True
 
-            self.trash_extra.enable_constant_velocity(extra.get_transform().get_right_vector() * 0.0 / 3.6)
 
 
 
@@ -584,7 +579,7 @@ class CarlaEnv():
         if len(self.collision_sensor.history) != 0:
             done = True
             reward = -1
-        elif time.time()-self.simul_time > 20:
+        elif time.time()-self.simul_time > 10:
             print("done")
             done = True
             reward = 0
@@ -774,7 +769,6 @@ class CarlaEnv():
             #                                  color=carla.Color(r=0, g=255, b=255), life_time=9999)
 
             # print(self.ego_Lane)
-
             if self.max_Lane_num != self.pre_max_Lane_num:
                 self.index +=1
                 if self.index >5:
@@ -786,7 +780,7 @@ class CarlaEnv():
                     # pre_distance = distance
                     waypoints = last_lane_waypoint.next(i)
                     if len(waypoints)>0:
-                         distance = ((waypoints[0].transform.location.x-self.lane_change_point[self.index].x)**2+(waypoints[0].transform.location.y-self.lane_change_point[self.index].y)**2+(waypoints[0].transform.location.z-self.lane_change_point[self.index].z)**2)**0.5
+                        distance = ((waypoints[0].transform.location.x-self.lane_change_point[self.index].x)**2+(waypoints[0].transform.location.y-self.lane_change_point[self.index].y)**2+(waypoints[0].transform.location.z-self.lane_change_point[self.index].z)**2)**0.5
                     else:
                         return None
                     # if pre_distance <= distance:
@@ -794,6 +788,10 @@ class CarlaEnv():
                     #     return distance + i
                     if round(distance - search_raidus) > 0:
                         i +=round(distance-search_raidus)
+                        # if self.index ==0:
+                        #     self.world.debug.draw_string(waypoints[0].transform.location,
+                        #                                                                       'o', draw_shadow=True,
+                        #                                                                       color=carla.Color(r=255, g=255, b=0), life_time=9999)
                         # break
                     else:
                         return distance +i
@@ -879,7 +877,7 @@ class CarlaEnv():
         return True
 
 
-    def safety_check(self,decision, safe_lane_change_again_time=3):
+    def safety_check(self,decision, safe_lane_change_again_time=2):
         remained_action_list = None
         action = decision
         # print("befor decision: ", self.decision,"before lane", self.ego_Lane)
@@ -1025,7 +1023,7 @@ class CarlaEnv():
                 for extra in self.extra_list:
                     extra.enable_constant_velocity(extra.get_transform().get_right_vector() * 0.0)
 
-            if time.time()-self.lane_change_time >7:
+            if time.time()-self.lane_change_time >10:
                 self.lane_change_time = time.time()
                 if pre_decision is None:
                     self.decision = -1
@@ -1202,7 +1200,6 @@ class CarlaEnv():
                     #     self.restart()
                     #     self.start_epoch = False
                     #     break
-
                     self.decision_changed = False
 
                         #online learning
@@ -1212,14 +1209,13 @@ class CarlaEnv():
                         #     self.acummulated_loss += self.agent.loss
 
                     if self.controller.is_lane_changing == True and self.controller.is_start_to_lane_change == False:
-                        self.decision =0
+                        self.decision = 0
                     else:
                         self.decision = self.agent.act(state, x_static)
 
                     # pre_decision = self.decision
                     self.decision = self.safety_check(self.decision)
                     # print("after decision: ", self.decision, "after lane", self.ego_Lane)
-
                     is_error = self.controller.apply_control(self.decision)
                     if is_error:
                         self.restart()
@@ -1240,6 +1236,7 @@ class CarlaEnv():
                         self.restart()
                         self.start_epoch = False
                         break
+
                     else:
                       [__, _, decision, reward, next_state, next_x_static, done] =  tmp
 
@@ -1250,8 +1247,6 @@ class CarlaEnv():
                         else:
                             self.agent.buffer.append(sample)
                             self.agent.memorize_td_error(0)
-
-
 
                         print("buffer size : ", len(self.agent.buffer.size()))
                         n=100.0
