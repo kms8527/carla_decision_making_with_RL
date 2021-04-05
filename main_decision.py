@@ -95,7 +95,7 @@ class CarlaEnv():
         self.accumulated_loss = 0
 
         self.end_point = 0
-        self.ROI_length = 1000.0 #(meters)
+        self.ROI_length = 100.0 #(meters)
         self.safe_lane_change_distance = 0
         self.search_radius = None
         self.left_search_radius = None
@@ -716,6 +716,7 @@ class CarlaEnv():
             #         extra_acel.y - self.player.get_acceleration().y) ** 2 +
             #       (extra_acel.z - self.player.get_acceleration().z) ** 2) ** 0.5
             state_dyn = torch.tensor([dr/self.ROI_length, dv/10.0 , length/10.0, self.extra_dl_list[x]])
+            print(state_dyn[0])
             state.append(state_dyn)
 
             # state.append(dr)
