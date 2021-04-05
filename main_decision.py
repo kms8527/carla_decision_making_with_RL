@@ -115,7 +115,7 @@ class CarlaEnv():
         settings.fixed_delta_seconds = 0.03
         self.world.apply_settings(settings)
         self.extra_num = 11
-        self.scenario =  "scenario3"#"random" #
+        self.scenario =  "random"# "scenario3" # #
         self.pilot_style = "manual" # "auto"
 
         self.section = 0
@@ -554,7 +554,7 @@ class CarlaEnv():
 
     def step(self, decision):
 
-        plc = 0.1
+        plc = 0.05
         # decision = None
         '''
         # Simple Action (action number: 3)
@@ -585,7 +585,7 @@ class CarlaEnv():
         if len(self.collision_sensor.history) != 0:
             done = True
             reward = -1
-        elif time.time()-self.simul_time > 10:
+        elif time.time()-self.simul_time > 30:
             print("done")
             done = True
             reward = 0
@@ -593,7 +593,7 @@ class CarlaEnv():
             done = True
             reward = -1
         else:
-            reward = 0.05-abs(self.controller.desired_vel-self.controller.velocity)/(self.controller.desired_vel*10)-plc
+            reward = 0.05-2*abs(self.controller.desired_vel-self.controller.velocity)/(self.controller.desired_vel*10)-plc
         # print(reward)
         # if self.decision_changed == True:
         #     reward -= -1
@@ -1092,7 +1092,7 @@ class CarlaEnv():
 
     def main(self):
 
-        PATH = "/home/a/RL_decision/per_weights/"
+        PATH = "/home/a/RL_decision/per_deepset_ddqn_random_weights/"
         print(torch.cuda.get_device_name())
         clock = pygame.time.Clock()
         Keyboardcontrol = KeyboardControl(self, False)
@@ -1298,12 +1298,17 @@ class CarlaEnv():
                             self.agent.memorize_td_error(0)
 
                             if self.decision_changed:
+                                # if x_static[0] <=1.5:
+                                #     print("lane 1 :", before_safety_decision)
+                                # elif x_static[0]>3.5:
+                                #     print("lane 4 :", before_safety_decision)
+
                                 sample = [state, x_static, before_safety_decision, -1, None, None, done]
                                 self.agent.buffer.append(sample)
                                 self.agent.memorize_td_error(0)
 
                         print("buffer size : ", len(self.agent.buffer.size()))
-                        n=100.0
+                        n=200.0
 
                         print("epsilon :", self.agent.epsilon)
                         print("epoch : ", epoch, "누적 보상 : ", self.accumulated_reward)
@@ -1353,6 +1358,10 @@ class CarlaEnv():
                             self.agent.buffer.append(sample)
                             self.agent.memorize_td_error(0)
                             if self.decision_changed:
+                                # if x_static[0] <=1.5:
+                                #     print("lane 1 :", before_safety_decision)
+                                # elif x_static[0]>3.5:
+                                #     print("lane 4 :", before_safety_decision)
                                 sample = [state, x_static, before_safety_decision, -1, None, None, done]
                                 self.agent.buffer.append(sample)
                                 self.agent.memorize_td_error(0)

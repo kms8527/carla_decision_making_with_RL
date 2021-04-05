@@ -115,7 +115,7 @@ class decision_driving_Agent:
         self.epsilon = 1
 
         self.epsilon_min = 0.01
-        self.decaying = 0.99
+        self.decaying = 0.999
         self.learning_rate =0.001
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
         self.loss = 9999999999
@@ -306,9 +306,6 @@ class decision_driving_Agent:
         self.loss = F.smooth_l1_loss(q_value, expected_q_values)
         # print(" loss : ", self.loss, "q_value :", q_value.mean())
         # next_q_state_values = self.target_model(s1).cuda()
-        if self.loss >2.0:
-            print(self.loss)
-            print(a)
 
         # off-policy
 
