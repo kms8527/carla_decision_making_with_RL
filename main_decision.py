@@ -955,24 +955,7 @@ class CarlaEnv():
                 #     print("safety exception occured, action :", action, "before decision:",decision)
             else:
                 return 0
-            # elif decision ==1: # and self.ego_Lane != self.max_Lane_num:
-            #     self.lane_change_time = time.time()
-            #     return decision
-            # elif decision ==-1: # and self.ego_Lane != 1:
-            #     self.lane_change_time = time.time()
-            #     return decision
 
-            # else: #3차선에서 우 차도 판단, 1차선에서 좌차선 판단
-            #     if self.agent.selection_method == 'random' and decision == 1 and self.ego_Lane == self.max_Lane_num:
-            #         action = random.randrange(-1, 1)
-            #         return action
-            #     elif self.agent.selection_method == 'random' and decision == -1 and self.ego_Lane == 1:
-            #         action = random.randrange(0, 2)
-            #         return action
-            #     elif self.ego_Lane == self.max_Lane_num and decision == 1:
-            #         return int(self.agent.q_value[0][0:2].argmax().item()) - 1
-            #     elif self.ego_Lane == 1 and decision == -1:
-            #         return int(self.agent.q_value[0][1:3].argmax().item())
         else:
             return decision
 
