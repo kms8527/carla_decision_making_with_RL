@@ -123,7 +123,7 @@ class Pure_puresuit_controller:
 
 
         if decision == 1:
-            print("right 차선 변경 수행")
+            # print("right 차선 변경 수행")
             self.leading_vehicle = None
             self.is_start_to_lane_change = True
 
@@ -139,7 +139,7 @@ class Pure_puresuit_controller:
             #                              color=carla.Color(r=0, g=255, b=0), life_time=1)
 
         elif decision == -1:
-            print("left 차선 변경 수행")
+            # print("left 차선 변경 수행")
             self.leading_vehicle = None
             self.is_start_to_lane_change = True
 

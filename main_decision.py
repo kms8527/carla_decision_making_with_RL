@@ -1269,9 +1269,9 @@ class CarlaEnv():
 
                     tmp = self.step(self.decision)
 #self.pre_ego_lane != self.ego_Lane
-                    if self.decision !=0:
+                    # if self.decision !=0:
                         # print("before decision:", pre_decision, "before lane", self.pre_ego_lane)
-                        print("after decision: ", self.decision, "after lane", self.ego_Lane)
+                        # print("after decision: ", self.decision, "after lane", self.ego_Lane)
 
                     self.pre_ego_lane = self.ego_Lane
 
@@ -1319,8 +1319,10 @@ class CarlaEnv():
                             for i in range(int(n)):
                                 # self.offline_learning_epoch +=1
                                 self.acummulated_loss += self.agent.loss
-                            writer.add_scalar('Loss', self.acummulated_loss / n, epoch)
-                        writer.add_scalar('누적 보상 ', self.accumulated_reward, epoch)
+                            if epoch != epoch_init:
+                                writer.add_scalar('Loss', self.acummulated_loss / n, epoch)
+                        if epoch != epoch_init:
+                            writer.add_scalar('누적 보상 ', self.accumulated_reward, epoch)
 
                         if epoch % 2 == 0:
                             self.agent.target_model.load_state_dict(self.agent.model.state_dict())
