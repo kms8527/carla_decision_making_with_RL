@@ -115,7 +115,7 @@ class decision_driving_Agent:
         self.epsilon = 1
 
         self.epsilon_min = 0.01
-        self.decaying = 0.9999
+        self.decaying = 0.99
         self.learning_rate =0.001
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
         self.loss = 9999999999
@@ -187,6 +187,8 @@ class decision_driving_Agent:
         td_errors = (reward_batch + self.gamma * next_state_values) - \
                     state_action_values.squeeze()
         p = abs(td_errors + self.td_Error_epsilon)**alpha
+
+
 
         # state_action_values는 size[minibatch*1]이므로 squeeze() 메서드로 size[minibatch]로 변환
 

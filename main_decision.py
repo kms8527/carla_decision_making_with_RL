@@ -593,7 +593,7 @@ class CarlaEnv():
             done = True
             reward = -1
         else:
-            reward = -abs(self.controller.desired_vel-self.controller.velocity)/(self.controller.desired_vel*10)-plc
+            reward = 0.05-abs(self.controller.desired_vel-self.controller.velocity)/(self.controller.desired_vel*10)-plc
         # print(reward)
         # if self.decision_changed == True:
         #     reward -= -1
@@ -716,7 +716,7 @@ class CarlaEnv():
             #         extra_acel.y - self.player.get_acceleration().y) ** 2 +
             #       (extra_acel.z - self.player.get_acceleration().z) ** 2) ** 0.5
             state_dyn = torch.tensor([dr/self.ROI_length, dv/10.0 , length/10.0, self.extra_dl_list[x]])
-            print(state_dyn[0])
+            # print(state_dyn[0])
             state.append(state_dyn)
 
             # state.append(dr)
