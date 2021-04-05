@@ -114,7 +114,7 @@ class decision_driving_Agent:
         self.target_model = DQN(self.inputs_shape,20,3,80,self.num_actions,self.batch_size,self.extra_num).cuda()
         self.epsilon = 1
 
-        self.epsilon_min = 0.01
+        self.epsilon_min = 0.001
         self.decaying = 0.999
         self.learning_rate =0.001
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)

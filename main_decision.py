@@ -112,9 +112,9 @@ class CarlaEnv():
         settings = self.world.get_settings()
         # settings.no_rendering_mode = True
         # settings.synchronous_mode = True
-        settings.fixed_delta_seconds = 0.03
+        settings.fixed_delta_seconds = 0.01
         self.world.apply_settings(settings)
-        self.extra_num = 11
+        self.extra_num = 20
         self.scenario =  "random"# "scenario3" # #
         self.pilot_style = "manual" # "auto"
 
@@ -237,8 +237,8 @@ class CarlaEnv():
 
         self.actor_list.append(self.player)
 
-        self.camera_rgb =RGBSensor(self.player, self.hud)
-        self.actor_list.append(self.camera_rgb.sensor)
+        # self.camera_rgb =RGBSensor(self.player, self.hud)
+        # self.actor_list.append(self.camera_rgb.sensor)
 
         # self.camera_depth =DepthCamera(self.player, self.hud)
         # self.actor_list.append(self.camera_depth.sensor)
@@ -554,7 +554,7 @@ class CarlaEnv():
 
     def step(self, decision):
 
-        plc = 0.05
+        plc = 0.02
         # decision = None
         '''
         # Simple Action (action number: 3)
@@ -584,20 +584,20 @@ class CarlaEnv():
         done = False
         if len(self.collision_sensor.history) != 0:
             done = True
-            reward = -1
-        elif time.time()-self.simul_time > 30:
+            reward = -10
+        elif time.time()-self.simul_time > 25:
             print("done")
             done = True
             reward = 0
         elif self.max_Lane_num < self.ego_Lane:
             done = True
-            reward = -1
+            reward = -10
         else:
-            reward = 0.05-2*abs(self.controller.desired_vel-self.controller.velocity)/(self.controller.desired_vel*10)-plc
+            reward = 0.08-0.9*abs(self.controller.desired_vel-self.controller.velocity)/(self.controller.desired_vel)-plc
         # print(reward)
         # if self.decision_changed == True:
         #     reward -= -1
-        self.accumulated_reward += reward
+        self.accumulated_reward += 1+reward
 
         #state length = 4 * num of extra vehicles + 1
         tmp = self.get_next_state(decision)  # get now state
@@ -962,7 +962,7 @@ class CarlaEnv():
 
     def main_test(self):
         restart_time = time.time()
-        PATH = "/home/a/RL_decision/trained_info.tar"
+        PATH = "/home/a/RL_decision/trained_info25.tar"
         print(torch.cuda.get_device_name())
         clock = pygame.time.Clock()
         Keyboardcontrol = KeyboardControl(self, False)
@@ -1104,6 +1104,7 @@ class CarlaEnv():
 
         load_dir = PATH+'trained_info.pt'
         if(os.path.exists(load_dir)):
+
             print("저장된 가중치 불러옴")
             checkpoint = torch.load(load_dir)
             device = torch.device('cuda')
@@ -1286,7 +1287,7 @@ class CarlaEnv():
                                 # elif x_static[0]>3.5:
                                 #     print("lane 4 :", before_safety_decision)
 
-                                sample = [state, x_static, before_safety_decision, -1, None, None, done]
+                                sample = [state, x_static, before_safety_decision, -10, None, None, done]
                                 self.agent.buffer.append(sample)
                                 self.agent.memorize_td_error(0)
 
@@ -1345,7 +1346,7 @@ class CarlaEnv():
                                 #     print("lane 1 :", before_safety_decision)
                                 # elif x_static[0]>3.5:
                                 #     print("lane 4 :", before_safety_decision)
-                                sample = [state, x_static, before_safety_decision, -1, None, None, done]
+                                sample = [state, x_static, before_safety_decision, -10, None, None, done]
                                 self.agent.buffer.append(sample)
                                 self.agent.memorize_td_error(0)
 
