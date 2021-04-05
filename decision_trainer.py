@@ -123,10 +123,12 @@ class decision_driving_Agent:
         # self.td_memory = []
         self.td_Error_epsilon = 0.0001
         self.controller = controller
+        self.q_value =0
 
-    def update_td_error_memory(self,alpha = 0.6):
+    def update_td_error_memory(self,epoch,alpha = 0.7):
         self.model.eval()
         self.target_model.eval()
+
 
         transitions = self.buffer.buffer
         # print("asdfasdf")
@@ -161,6 +163,13 @@ class decision_driving_Agent:
         # 다음 상태에서 Q값이 최대가 되는 행동 a_m을 Main Q-Network로 계산
         # 마지막에 붙은 [1]로 행동에 해당하는 인덱스를 구함
         a_m[non_final_mask] = self.model(non_final_next_states,non_final_x1_static).detach().max(1)[1]
+        non_final_a_m = a_m[non_final_mask]
+        strait_action_mask = [False if ego_lane % 1 == 0 else index for index, ego_lane in
+                              enumerate(non_final_x1_static[0:-1:3])]
+        non_final_a_m = [non_final_a_m[k].item() if k != False else 1 for k in strait_action_mask]
+        # 다음 상태가 있는 것만을 걸러내고, size 32를 32*1로 변환
+        non_final_a_m = torch.tensor(non_final_a_m).cuda()
+        a_m_non_final_next_states = non_final_a_m.view(-1, 1)
 
         # 다음 상태가 있는 것만을 걸러내고, size 32를 32*1로 변환
         a_m_non_final_next_states = a_m[non_final_mask].view(-1, 1)
@@ -223,12 +232,11 @@ class decision_driving_Agent:
             # x_static = torch.cat(x_static)l
             state = state.type(torch.FloatTensor).cuda() #uint8 ->float
             x_static = x_static.type(torch.FloatTensor).cuda()
-            with torch.no_grad()\
-                    :
+            with torch.no_grad():
                 self.q_value = self.model(state,x_static)
                 action =  int(self.q_value.argmax().item())-1
 
-            print("Q: ",self.q_value, "q_ACTION:",action)
+            # print("Q: ",self.q_value, "q_ACTION:",action)
 
             # print(self.q_value)
 
@@ -237,7 +245,7 @@ class decision_driving_Agent:
         else:
             self.selection_method = 'random'
             action = random.randrange(self.num_actions)-1
-            print("random action :", action)
+            # print("random action :", action)
         return action
 
     def learning(self):  # sample에서 뽑고 backpropagation 하는 과정
@@ -350,10 +358,14 @@ class decision_driving_Agent:
 
         q_values = self.model(s0, x0_static).cuda()
         # action index form main_q
-        a_m[non_final_mask] = self.model(non_final_s1, non_final_x1_static).detach().max(1)[1].cuda()
 
+        a_m[non_final_mask] = self.model(non_final_s1, non_final_x1_static).detach().max(1)[1].cuda()
+        non_final_a_m = a_m[non_final_mask]
+        strait_action_mask = [False if ego_lane % 1 == 0 else index for index, ego_lane in enumerate(non_final_x1_static[0:-1:3])]
+        non_final_a_m = [non_final_a_m[k].item() if k != False else 1 for k in strait_action_mask]
         # 다음 상태가 있는 것만을 걸러내고, size 32를 32*1로 변환
-        a_m_non_final_next_states = a_m[non_final_mask].view(-1, 1)
+        non_final_a_m = torch.tensor(non_final_a_m).cuda()
+        a_m_non_final_next_states = non_final_a_m.view(-1, 1)
 
         # 다음 상태가 있는 인덱스에 대해 행동 a_m의 Q값을 target Q-Network로 계산
         # detach() 메서드로 값을 꺼내옴

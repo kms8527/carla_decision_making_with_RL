@@ -104,12 +104,15 @@ class Pure_puresuit_controller:
         if self.waypoint is None:
             return False
         if self.ld < self.player_length+self.waypoint.lane_width/3.0:
-            try:
-                self.waypoint =self.waypoint.next(int(self.velocity/3.6*0.3+3))[0]
-                self.is_lane_changing = False
-            except:
-                print("직진 차선, waypoint 존재 x")
-                return -1
+
+            waypoints = self.waypoint.next(int(self.velocity / 3.6 * 0.3 + 3))
+            if len(waypoints) ==0:
+                return False
+            else:
+                self.waypoint = waypoints[0]
+
+            self.is_lane_changing = False
+
             self.world.debug.draw_string(self.waypoint.transform.location, 'o', draw_shadow=True,
                                      color=carla.Color(r=255, g=255, b=255), life_time=1)
 
@@ -119,36 +122,37 @@ class Pure_puresuit_controller:
         self.is_start_to_lane_change = False
 
 
-        if decision == 1 and self.is_lane_changing == False:
-            # print("right 차선 변경 수행")
+        if decision == 1:
+            print("right 차선 변경 수행")
             self.leading_vehicle = None
             self.is_start_to_lane_change = True
-            # self.player.set_autopilot(False)
-            try:
-                # self.waypoint = self.waypoint.next(25)[0]
-                self.waypoint = self.waypoint.next(int(self.velocity / 1.4 + 3))[0]
-                self.waypoint = self.waypoint.get_right_lane()
-                # self.world.debug.draw_string(self.waypoint.transform.location, 'o', draw_shadow=True,
-                #                              color=carla.Color(r=0, g=255, b=0), life_time=1)
-            except:
-                print("오른쪽 판단, waypoint 존재 x")
-                return -1
-        elif decision == -1 and self.is_lane_changing == False:
-            # print("left 차선 변경 수행")
-            self.leading_vehicle = None
-            # self.player.set_autopilot(False)
-            try:
-                # self.waypoint = random.choice(self.waypoint.next(25))
-                # tmp = self.waypoint
-                self.waypoint = self.waypoint.next(int(self.velocity / 1.4 + 3))[0]
-                self.waypoint = self.waypoint.get_left_lane()
-                self.is_start_to_lane_change = True
-                # self.world.debug.draw_string(self.waypoint.transform.location, 'o', draw_shadow=True,
-                #                              color=carla.Color(r=0, g=255, b=0), life_time=1)
 
-            except:
+            waypoints = self.waypoint.next(int(self.velocity / 1.4 + 3))
+            if len(waypoints) == 0:
+                print("오른쪽 판단, waypoint 존재 x")
+                return False
+            else:
+                self.waypoint = waypoints[0]
+
+            self.waypoint = self.waypoint.get_right_lane()
+            # self.world.debug.draw_string(self.waypoint.transform.location, 'o', draw_shadow=True,
+            #                              color=carla.Color(r=0, g=255, b=0), life_time=1)
+
+        elif decision == -1:
+            print("left 차선 변경 수행")
+            self.leading_vehicle = None
+            self.is_start_to_lane_change = True
+
+            # self.player.set_autopilot(False)
+            waypoints = self.waypoint.next(int(self.velocity / 1.4 + 3))
+            if len(waypoints) == 0:
                 print("왼쪽 판단, waypoint 존재 x")
-                return -1
+                return False
+            else:
+                self.waypoint = waypoints[0]
+
+            self.waypoint = self.waypoint.get_left_lane()
+
         if self.waypoint is None:
             return False
 
