@@ -745,8 +745,8 @@ class CarlaEnv():
         else:
             pass
 
-        if self.ego_Lane % 1 == 0 and self.decision !=0:
-            print("here")
+        # if self.ego_Lane % 1 == 0 and self.decision !=0:
+        #     print("here")
 
         x_static= []
         lane_valid_distance = self.search_distance_valid()
@@ -915,7 +915,7 @@ class CarlaEnv():
 
         if decision !=0:
             if self.can_lane_change == False: # dont change frequently
-                self.decision_changed = True
+                # self.decision_changed = True
                 return 0 #즉 직진
             elif self.agent.selection_method == 'random' and decision == 1.5 and self.ego_Lane >=self.max_Lane_num-0.5: #dont leave max lane
                 self.decision_changed = True
@@ -937,8 +937,8 @@ class CarlaEnv():
                 # print("remained_action_list:",remained_action_list)
                 action =  int(self.agent.q_value[0][1:3].argmax().item())
 
-            if action !=0 and self.ego_Lane %1 !=0:
-                self.check +=1
+            # if action !=0 and self.ego_Lane %1 !=0:
+            #     self.check +=1
                 # print("here")
 
             if action != 0:# and self.can_lane_change(action,state):
@@ -1242,13 +1242,13 @@ class CarlaEnv():
                         #     self.agent.learning()
                         #     self.acummulated_loss += self.agent.loss
 
-                    if self.controller.is_lane_changing == True and self.controller.is_start_to_lane_change == False:
+                    if self.can_lane_change == False: #self.controller.is_lane_changing == True and self.controller.is_start_to_lane_change == False
                         self.decision = 0
                     else:
                         self.decision = self.agent.act(state, x_static)
 
 
-                    pre_decision = self.decision
+                    before_safety_decision = self.decision
                     self.decision = self.safety_check(self.decision)
 
 
@@ -1296,6 +1296,11 @@ class CarlaEnv():
                             #     print("h")
                             self.agent.buffer.append(sample)
                             self.agent.memorize_td_error(0)
+
+                            if self.decision_changed:
+                                sample = [state, x_static, before_safety_decision, -1, None, None, done]
+                                self.agent.buffer.append(sample)
+                                self.agent.memorize_td_error(0)
 
                         print("buffer size : ", len(self.agent.buffer.size()))
                         n=100.0
@@ -1347,6 +1352,11 @@ class CarlaEnv():
                             #     print("h")
                             self.agent.buffer.append(sample)
                             self.agent.memorize_td_error(0)
+                            if self.decision_changed:
+                                sample = [state, x_static, before_safety_decision, -1, None, None, done]
+                                self.agent.buffer.append(sample)
+                                self.agent.memorize_td_error(0)
+
 
                         #just generate space to put error
 

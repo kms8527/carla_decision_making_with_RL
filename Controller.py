@@ -103,7 +103,7 @@ class Pure_puresuit_controller:
         ## waypoint update ##
         if self.waypoint is None:
             return False
-        if self.ld < self.player_length+self.waypoint.lane_width/3.0:
+        if self.ld < self.player_length+self.waypoint.lane_width:
 
             waypoints = self.waypoint.next(int(self.velocity / 3.6 * 0.3 + 3))
             if len(waypoints) ==0:
