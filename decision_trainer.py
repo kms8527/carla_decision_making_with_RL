@@ -152,20 +152,26 @@ class decision_driving_Agent:
         state_action_values = self.model(state_batch, static_batch).gather(1, action_batch+1).detach()
 
         # cartpole이 done 상태가 아니고, next_state가 존재하는지 확인하는 인덱스 마스크를 만듬
-        next_tartget_q= torch.zeros(len(self.buffer.buffer)).cuda()
+        # next_q_values= torch.zeros(len(self.buffer.buffer)).cuda()
         non_final_mask = torch.ByteTensor(
             tuple(map(lambda s: s is not None, batch.next_state))).type(torch.BoolTensor)
 
         # 먼저 전체를 0으로 초기화, 크기는 기억한 transition 갯수만큼
-        next_state_values = torch.zeros(len(self.buffer.buffer)).cuda()
+        next_state_value = torch.zeros(len(self.buffer.buffer)).cuda()
         a_m = torch.zeros(len(self.buffer.buffer)).type(torch.LongTensor).cuda()
-
         # 다음 상태에서 Q값이 최대가 되는 행동 a_m을 Main Q-Network로 계산
         # 마지막에 붙은 [1]로 행동에 해당하는 인덱스를 구함
+
+        # next_q_values =self.model(non_final_next_states,non_final_x1_static).detach()
         a_m[non_final_mask] = self.model(non_final_next_states,non_final_x1_static).detach().max(1)[1]
         non_final_a_m = a_m[non_final_mask]
+        # if k==1 for k in batch.action
+        #
+        # if
+        #     lane_change_safety_action_mask = [ if else for in ]
         strait_action_mask = [False if ego_lane % 1 == 0 else index for index, ego_lane in
                               enumerate(non_final_x1_static[0:-1:3])]
+
         non_final_a_m = [non_final_a_m[k].item() if k != False else 1 for k in strait_action_mask]
         # 다음 상태가 있는 것만을 걸러내고, size 32를 32*1로 변환
         non_final_a_m = torch.tensor(non_final_a_m).cuda()
@@ -177,14 +183,14 @@ class decision_driving_Agent:
         # 다음 상태가 있는 인덱스에 대해 행동 a_m의 Q값을 target Q-Network로 계산
         # detach() 메서드로 값을 꺼내옴
         # squeeze() 메서드로 size[minibatch*1]을 [minibatch]로 변환
-        next_state_values[non_final_mask] = self.target_model(
+        next_state_value[non_final_mask] = self.target_model(
             non_final_next_states,non_final_x1_static).gather(1, a_m_non_final_next_states).detach().squeeze()
 
-        next_tartget_q[non_final_mask] = self.target_model(non_final_next_states,non_final_x1_static).gather(1, a_m_non_final_next_states).detach().squeeze()
+        # next_tartget_q[non_final_mask] = self.target_model(non_final_next_states,non_final_x1_static).gather(1, a_m_non_final_next_states).detach().squeeze()
 
 
         # TD 오차를 계산
-        td_errors = (reward_batch + self.gamma * next_state_values) - \
+        td_errors = (reward_batch + self.gamma * next_state_value) - \
                     state_action_values.squeeze()
         p = abs(td_errors + self.td_Error_epsilon)**alpha
 
@@ -323,7 +329,7 @@ class decision_driving_Agent:
 
         s0, x0_static, a, r, non_final_s1, with_fianl_s1, non_final_x1_static, done = self.buffer.PER_make_minibatch(
             self.batch_size)
-        print("finished pick minibatch data")
+        # print("finished pick minibatch data")
         # print(s0)
 
 

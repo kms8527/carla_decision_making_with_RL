@@ -249,11 +249,11 @@ class CarlaEnv():
         self.collision_sensor = CollisionSensor(self.player, self.hud)  # 충돌 여부 판단하는 센서
         self.actor_list.append(self.collision_sensor.sensor)
 
-        self.lane_invasion_sensor = LaneInvasionSensor(self.player, self.hud)  # lane 침입 여부 확인하는 센서
-        self.actor_list.append(self.lane_invasion_sensor.sensor)
+        # self.lane_invasion_sensor = LaneInvasionSensor(self.player, self.hud)  # lane 침입 여부 확인하는 센서
+        # self.actor_list.append(self.lane_invasion_sensor.sensor)
 
-        self.gnss_sensor = GnssSensor(self.player)
-        self.actor_list.append(self.gnss_sensor.sensor)
+        # self.gnss_sensor = GnssSensor(self.player)
+        # self.actor_list.append(self.gnss_sensor.sensor)
 
         # --------------
         # Spawn Surrounding vehicles
@@ -457,7 +457,7 @@ class CarlaEnv():
         # print("tm setting finished")
         # self.player.set_autopilot(True,tm_port)
         # traffic_manager.auto_lane_change(self.player, False)
-        self.controller = Pure_puresuit_controller(self.player, self.waypoint, self.extra_list, 60)  # km/h
+        self.controller = Pure_puresuit_controller(self.player, self.waypoint, self.extra_list, 70)  # km/h
         # print("controller setting finished")
         # target_velocity = 60 / 3.6
         # forward_vec = self.player.get_transform().get_forward_vector()
@@ -554,7 +554,7 @@ class CarlaEnv():
 
     def step(self, decision):
 
-        plc = 0.02
+        plc = 0.005
         # decision = None
         '''
         # Simple Action (action number: 3)
@@ -584,16 +584,26 @@ class CarlaEnv():
         done = False
         if len(self.collision_sensor.history) != 0:
             done = True
-            reward = -10
+            print("collision")
+            reward = -3
         elif time.time()-self.simul_time > 25:
-            print("done")
+            print("simultime done")
             done = True
             reward = 0
-        elif self.max_Lane_num < self.ego_Lane:
+        # elif self.max_Lane_num < self.ego_Lane:
+        #     done = True
+        #     reward = -3
+        elif decision == 1 and self.ego_Lane >= self.max_Lane_num - 0.5:  # dont leave max lane
             done = True
-            reward = -10
+            print("lane right collision")
+            reward = -3
+        elif decision == -1 and self.ego_Lane <= 1.5:  # dont leave min lane
+            done = True
+            print("lane left collision")
+            reward = -3
         else:
-            reward = 0.08-0.9*abs(self.controller.desired_vel-self.controller.velocity)/(self.controller.desired_vel)-plc
+            reward = 0.05-1/2**abs(self.controller.desired_vel-self.controller.velocity)/(self.controller.desired_vel)-plc
+            # print(abs(self.controller.desired_vel-self.controller.velocity)/(self.controller.desired_vel))
         # print(reward)
         # if self.decision_changed == True:
         #     reward -= -1
@@ -698,8 +708,8 @@ class CarlaEnv():
 
             extra_pos = extra.get_transform().location
             extra_vel = extra.get_velocity()
-            extra_acel = extra.get_acceleration()
-            sign = 0
+            # extra_acel = extra.get_acceleration()
+            # sign = 0
             if self.is_extra_front_than_ego(extra_pos) == True:
                 sign = 1
             else:
@@ -906,7 +916,6 @@ class CarlaEnv():
     def safety_check(self,decision, safe_lane_change_again_time=3):
         remained_action_list = None
         action = decision
-
         if (time.time()-self.lane_change_time) <= safe_lane_change_again_time:
             self.can_lane_change = False
         else:
@@ -917,25 +926,25 @@ class CarlaEnv():
             if self.can_lane_change == False: # dont change frequently
                 # self.decision_changed = True
                 return 0 #즉 직진
-            elif self.agent.selection_method == 'random' and decision == 1.5 and self.ego_Lane >=self.max_Lane_num-0.5: #dont leave max lane
-                self.decision_changed = True
-                action = random.randrange(-1,1)
-
-            elif self.agent.selection_method == 'random' and decision == -1 and self.ego_Lane <=1.5: #dont leave min lane
-                self.decision_changed = True
-                action = random.randrange(0, 2)
-
-            elif self.ego_Lane >= self.max_Lane_num-0.5 and decision == 1:
-                self.decision_changed = True
-                remained_action_list = self.agent.q_value[0][0:2]
-                # print("remained_action_list:",remained_action_list)
-                action = int(remained_action_list.argmax().item())-1
-
-            elif self.ego_Lane <= 1.5 and decision == -1:
-                self.decision_changed = True
-                remained_action_list =  self.agent.q_value[0][1:3]
-                # print("remained_action_list:",remained_action_list)
-                action =  int(self.agent.q_value[0][1:3].argmax().item())
+            # elif self.agent.selection_method == 'random' and decision == 1 and self.ego_Lane >=self.max_Lane_num-0.5: #dont leave max lane
+            #     self.decision_changed = True
+            #     action = random.randrange(-1,1)
+            #
+            # elif self.agent.selection_method == 'random' and decision == -1 and self.ego_Lane <=1.5: #dont leave min lane
+            #     self.decision_changed = True
+            #     action = random.randrange(0, 2)
+            #
+            # elif self.ego_Lane >= self.max_Lane_num-0.5 and decision == 1:
+            #     self.decision_changed = True
+            #     remained_action_list = self.agent.q_value[0][0:2]
+            #     # print("remained_action_list:",remained_action_list)
+            #     action = int(remained_action_list.argmax().item())-1
+            #
+            # elif self.ego_Lane <= 1.5 and decision == -1:
+            #     self.decision_changed = True
+            #     remained_action_list =  self.agent.q_value[0][1:3]
+            #     # print("remained_action_list:",remained_action_list)
+            #     action =  int(self.agent.q_value[0][1:3].argmax().item())
 
             # if action !=0 and self.ego_Lane %1 !=0:
             #     self.check +=1
@@ -944,11 +953,11 @@ class CarlaEnv():
             if action != 0:# and self.can_lane_change(action,state):
                 self.lane_change_time = time.time()
                 return action
-            elif remained_action_list is not None:
-                action = int(remained_action_list.argmin().item())
-                if action != 0:
-                    self.lane_change_time = time.time()
-                return action
+            # elif remained_action_list is not None:
+            #     action = int(remained_action_list.argmin().item())
+            #     if action != 0:
+            #         self.lane_change_time = time.time()
+            #     return action
                 # if self.can_lane_change(action, state):
                 #     return action
                 # else:
@@ -1110,6 +1119,8 @@ class CarlaEnv():
             device = torch.device('cuda')
             self.agent.model.load_state_dict(checkpoint['model_state_dict'])
             self.agent.model.to(device)
+            self.agent.target_model.load_state_dict((checkpoint['target_model_dict']))
+            self.agent.target_model.to(device)
             self.agent.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
             self.offline_learning_epoch = checkpoint['offline_learning_epoch']
             # self.agent.buffer.buffer = checkpoint['memorybuffer']
@@ -1142,6 +1153,7 @@ class CarlaEnv():
 
             [state, x_static] = self.get_next_state()  # 초기 상태 s0 초기화
             if state is None:
+                print("state initialize error")
                 self.restart()
                 self.start_epoch = False
 
@@ -1209,6 +1221,7 @@ class CarlaEnv():
                             'epoch': epoch,
                             'offline_learning_epoch': self.offline_learning_epoch,
                             'model_state_dict': self.agent.model.state_dict(),
+                            'target_model_dict': self.agent.target_model.state_dict(),
                             'optimizer_state_dict': self.agent.optimizer.state_dict(),
                             # 'memorybuffer': self.agent.buffer.buffer,
                             'epsilon': self.agent.epsilon}, PATH+"trained_info"+str(epoch)+".pt")#+str(epoch)+
@@ -1218,7 +1231,7 @@ class CarlaEnv():
                     #     self.restart()
                     #     self.start_epoch = False
                     #     break
-                    self.decision_changed = False
+                    # self.decision_changed = False
 
                         #online learning
                         # if len(self.agent.buffer.size()) > self.agent.batch_size:
@@ -1239,6 +1252,7 @@ class CarlaEnv():
 
                     is_error = self.controller.apply_control(self.decision)
                     if is_error:
+                        print("controller error")
                         self.restart()
                         self.start_epoch = False
                     # print("extra_controller 개수 :", len(self.extra_controller_list))
@@ -1255,13 +1269,14 @@ class CarlaEnv():
                     tmp = self.step(self.decision)
 #self.pre_ego_lane != self.ego_Lane
                     # if self.decision !=0:
-                        # print("before decision:", pre_decision, "before lane", self.pre_ego_lane)
+                        # print("before decision:", self.decision, "before lane", self.pre_ego_lane)
                         # print("after decision: ", self.decision, "after lane", self.ego_Lane)
 
                     self.pre_ego_lane = self.ego_Lane
 
 
                     if tmp is None:
+                        print("get_state_error in step process")
                         self.restart()
                         self.start_epoch = False
                         break
@@ -1281,18 +1296,18 @@ class CarlaEnv():
                             self.agent.buffer.append(sample)
                             self.agent.memorize_td_error(0)
 
-                            if self.decision_changed:
+                            # if self.decision_changed:
                                 # if x_static[0] <=1.5:
                                 #     print("lane 1 :", before_safety_decision)
                                 # elif x_static[0]>3.5:
                                 #     print("lane 4 :", before_safety_decision)
 
-                                sample = [state, x_static, before_safety_decision, -10, None, None, done]
-                                self.agent.buffer.append(sample)
-                                self.agent.memorize_td_error(0)
+                                # sample = [state, x_static, before_safety_decision, -3, None, None, done]
+                                # self.agent.buffer.append(sample)
+                                # self.agent.memorize_td_error(0)
 
                         print("buffer size : ", len(self.agent.buffer.size()))
-                        n=200.0
+                        n=300.0
 
                         print("epsilon :", self.agent.epsilon)
                         print("epoch : ", epoch, "누적 보상 : ", self.accumulated_reward)
@@ -1341,14 +1356,14 @@ class CarlaEnv():
                             #     print("h")
                             self.agent.buffer.append(sample)
                             self.agent.memorize_td_error(0)
-                            if self.decision_changed:
+                            # if self.decision_changed:
                                 # if x_static[0] <=1.5:
                                 #     print("lane 1 :", before_safety_decision)
                                 # elif x_static[0]>3.5:
                                 #     print("lane 4 :", before_safety_decision)
-                                sample = [state, x_static, before_safety_decision, -10, None, None, done]
-                                self.agent.buffer.append(sample)
-                                self.agent.memorize_td_error(0)
+                                # sample = [state, x_static, before_safety_decision, -3, None, None, done]
+                                # self.agent.buffer.append(sample)
+                                # self.agent.memorize_td_error(0)
 
 
                         #just generate space to put error
