@@ -107,7 +107,7 @@ class decision_driving_Agent:
         self.is_training = is_training
         self.batch_size = 32
         self.selection_method = None
-        self.gamma = 0.999
+        self.gamma = 0.9999
         self.buffer = ReplayBuffer(self.batch_size)
 
         self.model  = DQN(self.inputs_shape,20,3,80,self.num_actions,self.batch_size,self.extra_num).cuda()

@@ -1,23 +1,23 @@
-import sys
-
-tmp = ['/home/zz/carmaker_ros/ros/ros1_ws/devel/lib/python2.7/dist-packages',
-       '/opt/ros/ros1/lib/python2.7/dist-packages', '/opt/ros/kinetic/lib/python2.7/dist-packages',
-       '/home/zz/Downloads/CARLA_0.9.6/PythonAPI/carla-0.9.6-py3.5-linux-x86_64.egg',
-       '/home/zz/Downloads/CARLA_0.9.6/PythonAPI/carla/dist/carla-0.9.6-py3.5-linux-x86_64.egg_FILES']
-for index in range(0, len(tmp)):
-    if tmp[index] in sys.path:
-        sys.path.remove(tmp[index])
-
-if not ('/home/zz/Downloads/CARLA_0.9.6/PythonAPI/carla/dist/carla-0.9.6-py3.5-linux-x86_64.egg_FILES' in sys.path):
-    sys.path.append('/home/zz/Downloads/CARLA_0.9.6/PythonAPI/carla/dist/carla-0.9.6-py3.5-linux-x86_64.egg_FILES')
-
-if not ('/home/zz/Downloads/CARLA_0.9.6/HDMaps' in sys.path):
-    sys.path.append('/home/zz/Downloads/CARLA_0.9.6/HDMaps')
-if not ('/home/zz/Downloads/CARLA_0.9.6/PythonAPI/carla' in sys.path):
-    sys.path.append('/home/zz/Downloads/CARLA_0.9.6/PythonAPI/carla')
+# import sys
+#
+# tmp = ['/home/zz/carmaker_ros/ros/ros1_ws/devel/lib/python2.7/dist-packages',
+#        '/opt/ros/ros1/lib/python2.7/dist-packages', '/opt/ros/kinetic/lib/python2.7/dist-packages',
+#        '/home/zz/Downloads/CARLA_0.9.6/PythonAPI/carla-0.9.6-py3.5-linux-x86_64.egg',
+#        '/home/zz/Downloads/CARLA_0.9.6/PythonAPI/carla/dist/carla-0.9.6-py3.5-linux-x86_64.egg_FILES']
+# for index in range(0, len(tmp)):
+#     if tmp[index] in sys.path:
+#         sys.path.remove(tmp[index])
+#
+# if not ('/home/zz/Downloads/CARLA_0.9.6/PythonAPI/carla/dist/carla-0.9.6-py3.5-linux-x86_64.egg_FILES' in sys.path):
+#     sys.path.append('/home/zz/Downloads/CARLA_0.9.6/PythonAPI/carla/dist/carla-0.9.6-py3.5-linux-x86_64.egg_FILES')
+#
+# if not ('/home/zz/Downloads/CARLA_0.9.6/HDMaps' in sys.path):
+#     sys.path.append('/home/zz/Downloads/CARLA_0.9.6/HDMaps')
+# if not ('/home/zz/Downloads/CARLA_0.9.6/PythonAPI/carla' in sys.path):
+#     sys.path.append('/home/zz/Downloads/CARLA_0.9.6/PythonAPI/carla')
 
 import carla
-from carla import ColorConverter as cc
+# from carla import ColorConverter as cc
 import numpy as np
 import pygame
 import weakref
